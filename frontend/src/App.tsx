@@ -68,6 +68,7 @@ function App() {
                 setIsLoading(true)
               }}
               onSelectDocument={handleUpload}
+              onDocumentDeleted={handleClose}
             />
           </div>
         )}

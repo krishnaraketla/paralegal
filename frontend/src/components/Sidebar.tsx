@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import type { Document, SpellError } from '../App'
+import type { Document } from '../App'
+import type { SpellError } from '../api/spellcheck'
 import SpellcheckPanel from './SpellcheckPanel'
 import DocumentsPanel from './DocumentsPanel'
 import './Sidebar.css'
@@ -12,6 +13,7 @@ interface SidebarProps {
   documentId: string
   onRefresh: () => void
   onSelectDocument: (doc: Document) => void
+  onDocumentDeleted: () => void
 }
 
 export default function Sidebar({ 
@@ -19,7 +21,8 @@ export default function Sidebar({
   isLoading, 
   documentId,
   onRefresh,
-  onSelectDocument
+  onSelectDocument,
+  onDocumentDeleted
 }: SidebarProps) {
   const [activeTool, setActiveTool] = useState<Tool>('documents')
 
@@ -75,7 +78,11 @@ export default function Sidebar({
     switch (activeTool) {
       case 'documents':
         return (
-          <DocumentsPanel onSelectDocument={onSelectDocument} />
+          <DocumentsPanel 
+            onSelectDocument={onSelectDocument}
+            currentDocumentId={documentId}
+            onDocumentDeleted={onDocumentDeleted}
+          />
         )
       case 'spellcheck':
         return (

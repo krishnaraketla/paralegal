@@ -193,3 +193,68 @@
   color: var(--text-primary);
 }
 
+.document-item-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.document-item-wrapper .document-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.delete-btn:hover {
+  background: #dc262615;
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+.delete-btn.confirming {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: white;
+  animation: confirmPulse 0.2s ease;
+}
+
+.delete-btn.confirming:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.delete-btn .loading-spinner-small {
+  width: 16px;
+  height: 16px;
+}
+
+@keyframes confirmPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
