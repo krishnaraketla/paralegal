@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# Build output
+dist/
+build/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Storage (uploaded files)
+backend/storage/*
+!backend/storage/.gitkeep
+
+# Docker
+*.pem
+
+# Testing
+coverage/
+.coverage
+htmlcov/
+
