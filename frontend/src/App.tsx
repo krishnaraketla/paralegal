@@ -2,19 +2,13 @@ import { useState } from 'react'
 import FileUpload from './components/FileUpload'
 import DocumentEditor from './components/DocumentEditor'
 import Sidebar from './components/Sidebar'
+import type { SpellError } from './api/spellcheck'
 import './App.css'
 
 export interface Document {
   id: string
   filename: string
   url: string
-}
-
-export interface SpellError {
-  word: string
-  suggestions: string[]
-  paragraph: number
-  context: string
 }
 
 function App() {

@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react'
-import { getSpellcheck } from '../api/documents'
-import type { SpellError } from '../App'
+import { getSpellcheck, type SpellError } from '../api/spellcheck'
 
 export function useSpellcheck(documentId: string) {
   const [errors, setErrors] = useState<SpellError[]>([])

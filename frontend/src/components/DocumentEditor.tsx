@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { DocumentEditor as OnlyOfficeEditor } from '@onlyoffice/document-editor-react'
-import { getOnlyOfficeConfig, getSpellcheck } from '../api/documents'
-import type { Document, SpellError } from '../App'
+import { getOnlyOfficeConfig } from '../api/onlyoffice'
+import { getSpellcheck, type SpellError } from '../api/spellcheck'
+import type { Document } from '../App'
 import './DocumentEditor.css'
 
 interface DocumentEditorProps {

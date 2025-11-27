@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { getSpellcheck } from '../api/documents'
-import type { SpellError } from '../App'
+import { getSpellcheck, type SpellError } from '../api/spellcheck'
 import SpellcheckItem from './SpellcheckItem'
 import './SpellcheckPanel.css'
 
