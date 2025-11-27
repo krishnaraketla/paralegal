@@ -107,12 +107,6 @@ export default function DocumentEditor({
 
   return (
     <div className="editor-wrapper">
-      {isLoading && (
-        <div className="editor-overlay">
-          <div className="loading-spinner" />
-          <span>Running spellcheck...</span>
-        </div>
-      )}
       <div key={`editor-${document.id}-${editorKey}`} className="editor-container">
         <OnlyOfficeEditor
           id="docEditor"

@@ -77,19 +77,6 @@
   }
 }
 
-.editor-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(250, 248, 244, 0.92);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  z-index: 100;
-  color: var(--text-primary);
-}
-
 .editor-container {
   flex: 1;
   display: flex;

@@ -1,0 +1,84 @@
+.sidebar {
+  display: flex;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border-color);
+  overflow: hidden;
+  border-radius: 0 0 var(--radius-card) 0;
+  max-height: 100%;
+}
+
+.sidebar-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 0.5rem;
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-color);
+}
+
+.rail-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.rail-btn:hover {
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+
+.rail-btn.active {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
+
+.rail-btn.active:hover {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
+
+.sidebar-panel {
+  flex: 1;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.coming-soon-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.coming-soon-panel svg {
+  opacity: 0.5;
+}
+
+.coming-soon-panel h3 {
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.coming-soon-panel p {
+  font-size: 0.875rem;
+  margin: 0;
+  max-width: 200px;
+}
+

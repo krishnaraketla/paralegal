@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import FileUpload from './components/FileUpload'
 import DocumentEditor from './components/DocumentEditor'
-import SpellcheckSidebar from './components/SpellcheckSidebar'
+import Sidebar from './components/Sidebar'
 import './App.css'
 
 export interface Document {
@@ -66,13 +66,14 @@ function App() {
                 setIsLoading={setIsLoading}
               />
             </div>
-            <SpellcheckSidebar
-              errors={spellErrors}
+            <Sidebar
+              spellErrors={spellErrors}
               isLoading={isLoading}
               documentId={document.id}
               onRefresh={() => {
                 setIsLoading(true)
               }}
+              onSelectDocument={handleUpload}
             />
           </div>
         )}

@@ -2,21 +2,21 @@ import { useState } from 'react'
 import { getSpellcheck } from '../api/documents'
 import type { SpellError } from '../App'
 import SpellcheckItem from './SpellcheckItem'
-import './SpellcheckSidebar.css'
+import './SpellcheckPanel.css'
 
-interface SpellcheckSidebarProps {
+interface SpellcheckPanelProps {
   errors: SpellError[]
   isLoading: boolean
   documentId: string
   onRefresh: () => void
 }
 
-export default function SpellcheckSidebar({ 
+export default function SpellcheckPanel({ 
   errors, 
   isLoading, 
   documentId,
   onRefresh 
-}: SpellcheckSidebarProps) {
+}: SpellcheckPanelProps) {
   const [refreshing, setRefreshing] = useState(false)
   const [localErrors, setLocalErrors] = useState<SpellError[]>([])
   const displayErrors = localErrors.length > 0 ? localErrors : errors
@@ -39,8 +39,8 @@ export default function SpellcheckSidebar({
   }
 
   return (
-    <aside className="spellcheck-sidebar">
-      <div className="sidebar-header">
+    <div className="spellcheck-panel">
+      <div className="panel-header">
         <h2>Spellcheck</h2>
         <button 
           className="refresh-btn" 
@@ -65,9 +65,9 @@ export default function SpellcheckSidebar({
         </button>
       </div>
 
-      <div className="sidebar-content">
+      <div className="panel-content">
         {isLoading || refreshing ? (
-          <div className="sidebar-loading">
+          <div className="panel-loading">
             <div className="loading-spinner-small" />
             <span>Checking spelling...</span>
           </div>
@@ -98,12 +98,12 @@ export default function SpellcheckSidebar({
         )}
       </div>
 
-      <div className="sidebar-footer">
-        <p className="sidebar-hint">
+      <div className="panel-footer">
+        <p className="panel-hint">
           Click on a suggestion to copy it. Edit in the document editor.
         </p>
       </div>
-    </aside>
+    </div>
   )
 }
 
