@@ -26,6 +26,14 @@ export default function Sidebar({
 }: SidebarProps) {
   const [activeTool, setActiveTool] = useState<Tool>('documents')
 
+  const handleToolChange = (toolId: Tool) => {
+    console.log('%c[USER ACTION] Sidebar tool changed', 'color: #9C27B0; font-weight: bold;', {
+      previousTool: activeTool,
+      newTool: toolId,
+    })
+    setActiveTool(toolId)
+  }
+
   const tools: { id: Tool; label: string; icon: JSX.Element }[] = [
     {
       id: 'documents',
@@ -128,7 +136,7 @@ export default function Sidebar({
           <button
             key={tool.id}
             className={`rail-btn ${activeTool === tool.id ? 'active' : ''}`}
-            onClick={() => setActiveTool(tool.id)}
+            onClick={() => handleToolChange(tool.id)}
             title={tool.label}
           >
             {tool.icon}

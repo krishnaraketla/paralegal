@@ -1,7 +1,15 @@
+import logging
 from typing import List, Dict, Any
 from spellchecker import SpellChecker
 from docx import Document
 import re
+
+logger = logging.getLogger(__name__)
+
+
+class DocumentParseError(Exception):
+    """Raised when a document cannot be parsed for spellchecking"""
+    pass
 
 
 def edit_distance(s1: str, s2: str) -> int:
@@ -43,7 +51,17 @@ class SpellcheckService:
     def check_document(self, file_path: str) -> List[Dict[str, Any]]:
         """Check a DOCX document for spelling errors"""
         
-        doc = Document(file_path)
+        try:
+            doc = Document(file_path)
+        except KeyError as e:
+            # This happens when the DOCX file has non-standard structure
+            # (e.g., created by ONLYOFFICE with strict OOXML format)
+            logger.warning(f"Cannot parse document for spellcheck: {e}")
+            raise DocumentParseError(f"Document format not supported for spellcheck: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to open document for spellcheck: {e}")
+            raise DocumentParseError(f"Failed to open document: {e}")
+        
         errors = []
         seen_words = set()  # Track unique misspelled words
         

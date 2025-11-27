@@ -1,110 +1,75 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
-import { DocumentEditor as OnlyOfficeEditor } from '@onlyoffice/document-editor-react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { getOnlyOfficeConfig } from '../api/onlyoffice'
-import { getSpellcheck, type SpellError } from '../api/spellcheck'
 import type { Document } from '../App'
 import './DocumentEditor.css'
 
 interface DocumentEditorProps {
   document: Document
-  onSpellcheck: (errors: SpellError[]) => void
-  isLoading: boolean
-  setIsLoading: (loading: boolean) => void
 }
 
 const ONLYOFFICE_URL = import.meta.env.VITE_ONLYOFFICE_URL || 'http://localhost:8080'
 
-export default function DocumentEditor({ 
-  document, 
-  onSpellcheck,
-  isLoading,
-  setIsLoading 
-}: DocumentEditorProps) {
-  const [config, setConfig] = useState<Record<string, unknown> | null>(null)
+export default function DocumentEditor({ document }: DocumentEditorProps) {
   const [error, setError] = useState<string | null>(null)
-  const [editorReady, setEditorReady] = useState(false)
-  const spellcheckRan = useRef(false)
-  const editorInstanceRef = useRef<any | null>(null)
-  
-  // Generate a unique editor ID once per component mount
-  // This ensures OnlyOffice gets a fresh instance each time
-  const editorId = useMemo(() => `docEditor-${Date.now()}-${Math.random().toString(36).slice(2)}`, [])
+  const [iframeKey, setIframeKey] = useState(() => `iframe-${document.id}-${Date.now()}`)
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
+  const configLoadedRef = useRef(false)
 
-  // Clean up OnlyOffice editor instance when this component unmounts
+  // Reset iframe when document changes
   useEffect(() => {
-    return () => {
-      try {
-        // Prefer the instance we captured, but also fall back to the global map
-        const globalEditor = (window as any)?.DocEditor
-        const instanceFromRef = editorInstanceRef.current
-        const instanceFromGlobal = globalEditor?.instances?.[editorId]
-        const instance = instanceFromRef || instanceFromGlobal
+    configLoadedRef.current = false
+    setIframeKey(`iframe-${document.id}-${Date.now()}`)
+    setError(null)
+  }, [document.id])
 
-        if (instance && typeof instance.destroyEditor === 'function') {
-          instance.destroyEditor()
-        }
+  // Load config and send to iframe
+  const loadAndSendConfig = useCallback(async () => {
+    // Guard against duplicate loads
+    if (configLoadedRef.current) return
+    configLoadedRef.current = true
 
-        if (globalEditor?.instances && globalEditor.instances[editorId]) {
-          delete globalEditor.instances[editorId]
-        }
-      } catch (cleanupError) {
-        console.error('Failed to clean up ONLYOFFICE instance', cleanupError)
-      } finally {
-        editorInstanceRef.current = null
+    const editorId = `editor-${document.id}-${Date.now()}`
+    
+    try {
+      const config = await getOnlyOfficeConfig(document.id, document.filename, editorId)
+      
+      // Send config to iframe
+      if (iframeRef.current?.contentWindow) {
+        iframeRef.current.contentWindow.postMessage({
+          type: 'INIT_EDITOR',
+          config,
+          documentServerUrl: ONLYOFFICE_URL,
+          editorId,
+        }, '*')
       }
+      
+      setError(null)
+    } catch (err) {
+      console.error('Config error:', err)
+      setError('Failed to load document configuration')
+      configLoadedRef.current = false // Allow retry on error
     }
-  }, [editorId])
-
-  useEffect(() => {
-    async function loadConfig() {
-      try {
-        setEditorReady(false)
-        const configData = await getOnlyOfficeConfig(document.id, document.filename)
-        setConfig(configData as unknown as Record<string, unknown>)
-        setError(null)
-      } catch (err) {
-        setError('Failed to load document configuration')
-        console.error('Config error:', err)
-      }
-    }
-
-    loadConfig()
-    spellcheckRan.current = false
   }, [document.id, document.filename])
 
+  // Handle messages from iframe
   useEffect(() => {
-    async function runSpellcheck() {
-      if (!editorReady || spellcheckRan.current) return
+    function handleMessage(event: MessageEvent) {
+      const data = event.data
       
-      spellcheckRan.current = true
-      setIsLoading(true)
-      
-      try {
-        const result = await getSpellcheck(document.id)
-        onSpellcheck(result.errors)
-      } catch (err) {
-        console.error('Spellcheck error:', err)
-      } finally {
-        setIsLoading(false)
+      switch (data.type) {
+        case 'IFRAME_READY':
+          loadAndSendConfig()
+          break
+        case 'EDITOR_ERROR':
+          console.error('OnlyOffice editor error:', data.error)
+          setError('An error occurred while loading the editor')
+          break
       }
     }
 
-    runSpellcheck()
-  }, [editorReady, document.id, onSpellcheck, setIsLoading])
-
-  // Memoize callbacks to prevent unnecessary re-renders
-  const handleAppReady = useCallback((instance: object) => {
-    editorInstanceRef.current = instance
-  }, [])
-
-  const handleDocumentReady = useCallback(() => {
-    setEditorReady(true)
-  }, [])
-
-  const handleError = useCallback((event: object) => {
-    console.error('ONLYOFFICE error:', event)
-    setError('An error occurred while loading the editor')
-  }, [])
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [loadAndSendConfig])
 
   if (error) {
     return (
@@ -125,25 +90,16 @@ export default function DocumentEditor({
     )
   }
 
-  if (!config) {
-    return (
-      <div className="editor-loading">
-        <div className="loading-spinner" />
-        <span>Loading document...</span>
-      </div>
-    )
-  }
-
   return (
     <div className="editor-wrapper">
       <div className="editor-container">
-        <OnlyOfficeEditor
-          id={editorId}
-          documentServerUrl={ONLYOFFICE_URL}
-          config={config}
-          events_onAppReady={handleAppReady}
-          events_onDocumentReady={handleDocumentReady}
-          events_onError={handleError}
+        <iframe
+          key={iframeKey}
+          ref={iframeRef}
+          src="/editor.html"
+          title="Document Editor"
+          className="editor-iframe"
+          allow="clipboard-read; clipboard-write"
         />
       </div>
     </div>

@@ -29,7 +29,16 @@ export default function FileUpload({ onUpload }: FileUploadProps) {
   }, [])
 
   const handleFile = useCallback(async (file: File) => {
+    console.log('%c[USER ACTION] File selected for upload', 'color: #9C27B0; font-weight: bold;', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+    })
+
     if (!file.name.toLowerCase().endsWith('.docx')) {
+      console.log('%c[USER ACTION] Upload rejected - invalid file type', 'color: #FF9800; font-weight: bold;', {
+        fileName: file.name,
+      })
       setError('Please upload a .docx file')
       return
     }
@@ -39,6 +48,10 @@ export default function FileUpload({ onUpload }: FileUploadProps) {
 
     try {
       const result = await uploadDocument(file)
+      console.log('%c[USER ACTION] File upload successful', 'color: #9C27B0; font-weight: bold;', {
+        documentId: result.id,
+        filename: result.filename,
+      })
       onUpload({
         id: result.id,
         filename: result.filename,
@@ -58,6 +71,9 @@ export default function FileUpload({ onUpload }: FileUploadProps) {
 
     const file = e.dataTransfer.files[0]
     if (file) {
+      console.log('%c[USER ACTION] File dropped', 'color: #9C27B0; font-weight: bold;', {
+        fileName: file.name,
+      })
       handleFile(file)
     }
   }, [handleFile])
@@ -80,6 +96,10 @@ export default function FileUpload({ onUpload }: FileUploadProps) {
   }, [handleFile])
 
   const handleSelectExisting = useCallback((file: StoredDocument) => {
+    console.log('%c[USER ACTION] Existing file selected', 'color: #9C27B0; font-weight: bold;', {
+      documentId: file.id,
+      filename: file.filename,
+    })
     onUpload({
       id: file.id,
       filename: file.filename,

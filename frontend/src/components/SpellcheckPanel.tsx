@@ -21,10 +21,16 @@ export default function SpellcheckPanel({
   const displayErrors = localErrors.length > 0 ? localErrors : errors
 
   const handleRefresh = async () => {
+    console.log('%c[USER ACTION] Spellcheck refresh clicked', 'color: #9C27B0; font-weight: bold;', {
+      documentId,
+    })
     setRefreshing(true)
     onRefresh()
     try {
       const result = await getSpellcheck(documentId)
+      console.log('%c[USER ACTION] Spellcheck refreshed', 'color: #9C27B0; font-weight: bold;', {
+        errorCount: result.errors.length,
+      })
       setLocalErrors(result.errors)
     } catch (err) {
       console.error('Refresh error:', err)
@@ -34,6 +40,9 @@ export default function SpellcheckPanel({
   }
 
   const handleDismiss = (word: string) => {
+    console.log('%c[USER ACTION] Spellcheck error dismissed', 'color: #9C27B0; font-weight: bold;', {
+      word,
+    })
     setLocalErrors(prev => prev.filter(e => e.word !== word))
   }
 

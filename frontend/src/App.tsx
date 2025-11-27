@@ -21,10 +21,6 @@ function App() {
     setSpellErrors([])
   }
 
-  const handleSpellcheck = (errors: SpellError[]) => {
-    setSpellErrors(errors)
-  }
-
   const handleClose = () => {
     setDocument(null)
     setSpellErrors([])
@@ -56,9 +52,6 @@ function App() {
               <DocumentEditor
                 key={document.id}
                 document={document}
-                onSpellcheck={handleSpellcheck}
-                isLoading={isLoading}
-                setIsLoading={setIsLoading}
               />
             </div>
             <Sidebar

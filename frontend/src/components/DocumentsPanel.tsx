@@ -47,9 +47,13 @@ export default function DocumentsPanel({
   }, [confirmingDeleteId])
 
   const handleRefresh = async () => {
+    console.log('%c[USER ACTION] Documents list refresh clicked', 'color: #9C27B0; font-weight: bold;')
     setIsLoading(true)
     try {
       const docs = await listDocuments()
+      console.log('%c[USER ACTION] Documents list refreshed', 'color: #9C27B0; font-weight: bold;', {
+        documentCount: docs.length,
+      })
       setDocuments(docs)
       setError(null)
     } catch (err) {
@@ -61,6 +65,10 @@ export default function DocumentsPanel({
   }
 
   const handleSelect = (doc: StoredDocument) => {
+    console.log('%c[USER ACTION] Document selected from panel', 'color: #9C27B0; font-weight: bold;', {
+      documentId: doc.id,
+      filename: doc.filename,
+    })
     onSelectDocument({
       id: doc.id,
       filename: doc.filename,
@@ -73,11 +81,17 @@ export default function DocumentsPanel({
     
     // If already confirming this doc, execute delete
     if (confirmingDeleteId === docId) {
+      console.log('%c[USER ACTION] Document delete confirmed', 'color: #9C27B0; font-weight: bold;', {
+        documentId: docId,
+      })
       setConfirmingDeleteId(null)
       setDeletingId(docId)
       
       try {
         await deleteDocument(docId)
+        console.log('%c[USER ACTION] Document deleted successfully', 'color: #9C27B0; font-weight: bold;', {
+          documentId: docId,
+        })
         
         // If the deleted document is currently open, close it
         if (docId === currentDocumentId && onDocumentDeleted) {
@@ -95,6 +109,9 @@ export default function DocumentsPanel({
       }
     } else {
       // First click - show confirm state
+      console.log('%c[USER ACTION] Document delete clicked (awaiting confirmation)', 'color: #FF9800; font-weight: bold;', {
+        documentId: docId,
+      })
       setConfirmingDeleteId(docId)
     }
   }

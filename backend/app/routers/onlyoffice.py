@@ -33,6 +33,9 @@ async def onlyoffice_callback(request: Request):
     status = body.get("status")
     key = body.get("key")
     
+    # Extract doc_id from key (format: docId__sessionKey or just docId)
+    doc_id = key.split("__")[0] if key and "__" in key else key
+    
     # Status 2 or 6 means document is ready for saving
     if status in [2, 6]:
         download_url = body.get("url")
@@ -45,8 +48,8 @@ async def onlyoffice_callback(request: Request):
             response = requests.get(download_url, timeout=30)
             response.raise_for_status()
             
-            # Save the document
-            file_path = STORAGE_PATH / f"{key}.docx"
+            # Save the document using the original doc_id (not the session key)
+            file_path = STORAGE_PATH / f"{doc_id}.docx"
             with open(file_path, "wb") as f:
                 f.write(response.content)
             
@@ -63,7 +66,8 @@ async def onlyoffice_callback(request: Request):
 async def get_onlyoffice_config(
     doc_id: str, 
     request: Request,
-    filename: Optional[str] = Query(None, description="Original filename to display")
+    filename: Optional[str] = Query(None, description="Original filename to display"),
+    session_key: Optional[str] = Query(None, description="Unique session key for this editor instance")
 ):
     """Generate ONLYOFFICE editor configuration for a document"""
     
@@ -79,10 +83,15 @@ async def get_onlyoffice_config(
     # Use provided filename or fall back to doc_id
     display_title = filename if filename else f"{doc_id}.docx"
     
+    # NUCLEAR OPTION: Use unique session key so each editor session is completely separate
+    # This prevents ONLYOFFICE from caching/reusing sessions when switching documents
+    # Format: docId__sessionKey (double underscore as separator for parsing in callback)
+    document_key = f"{doc_id}__{session_key}" if session_key else doc_id
+    
     config = {
         "document": {
             "fileType": "docx",
-            "key": doc_id,
+            "key": document_key,
             "title": display_title,
             "url": f"{docker_url}/storage/{doc_id}.docx",
             "permissions": {

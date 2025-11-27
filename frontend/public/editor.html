@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document Editor</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    #editor-container {
+      width: 100%;
+      height: 100%;
+    }
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div id="editor-container">
+    <div class="loading">Loading editor...</div>
+  </div>
+
+  <script>
+    // Wait for config from parent window
+    let editorInstance = null;
+    
+    window.addEventListener('message', function(event) {
+      // Verify origin for security (in production, check specific origin)
+      const data = event.data;
+      
+      if (data.type === 'INIT_EDITOR') {
+        console.log('[IFRAME] Received INIT_EDITOR message', data);
+        initEditor(data.config, data.documentServerUrl, data.editorId);
+      }
+      
+      if (data.type === 'DESTROY_EDITOR') {
+        console.log('[IFRAME] Received DESTROY_EDITOR message');
+        destroyEditor();
+      }
+    });
+
+    function initEditor(config, documentServerUrl, editorId) {
+      // Load ONLYOFFICE API script
+      const script = document.createElement('script');
+      script.src = documentServerUrl + '/web-apps/apps/api/documents/api.js';
+      script.onload = function() {
+        console.log('[IFRAME] ONLYOFFICE API loaded, creating editor');
+        
+        // Clear loading message
+        document.getElementById('editor-container').innerHTML = '';
+        
+        // Create the editor
+        editorInstance = new DocsAPI.DocEditor('editor-container', {
+          ...config,
+          events: {
+            onAppReady: function() {
+              console.log('[IFRAME] Editor app ready');
+              window.parent.postMessage({ type: 'EDITOR_APP_READY' }, '*');
+            },
+            onDocumentReady: function() {
+              console.log('[IFRAME] Document ready');
+              window.parent.postMessage({ type: 'EDITOR_DOCUMENT_READY' }, '*');
+            },
+            onError: function(event) {
+              console.error('[IFRAME] Editor error', event);
+              window.parent.postMessage({ type: 'EDITOR_ERROR', error: event }, '*');
+            }
+          }
+        });
+      };
+      script.onerror = function() {
+        console.error('[IFRAME] Failed to load ONLYOFFICE API');
+        window.parent.postMessage({ type: 'EDITOR_ERROR', error: 'Failed to load ONLYOFFICE API' }, '*');
+      };
+      document.head.appendChild(script);
+    }
+
+    function destroyEditor() {
+      if (editorInstance && typeof editorInstance.destroyEditor === 'function') {
+        try {
+          editorInstance.destroyEditor();
+        } catch (e) {
+          console.warn('[IFRAME] Error destroying editor:', e);
+        }
+      }
+      editorInstance = null;
+    }
+
+    // Notify parent that iframe is ready
+    window.parent.postMessage({ type: 'IFRAME_READY' }, '*');
+  </script>
+</body>
+</html>
+

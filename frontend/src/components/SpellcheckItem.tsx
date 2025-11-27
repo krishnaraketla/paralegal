@@ -22,6 +22,10 @@ export default function SpellcheckItem({ error, onDismiss }: SpellcheckItemProps
   }
 
   const handleCopy = async (suggestion: string) => {
+    console.log('%c[USER ACTION] Suggestion copied to clipboard', 'color: #9C27B0; font-weight: bold;', {
+      misspelledWord: error.word,
+      suggestion,
+    })
     try {
       await navigator.clipboard.writeText(suggestion)
       setCopied(suggestion)
@@ -32,6 +36,9 @@ export default function SpellcheckItem({ error, onDismiss }: SpellcheckItemProps
   }
 
   const handleDismiss = () => {
+    console.log('%c[USER ACTION] Spellcheck item dismissed', 'color: #9C27B0; font-weight: bold;', {
+      word: error.word,
+    })
     setDismissed(true)
     onDismiss(error.word)
   }
