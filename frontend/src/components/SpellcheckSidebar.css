@@ -5,6 +5,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-radius: 0 0 var(--radius-card) 0;
 }
 
 .sidebar-header {
@@ -28,7 +29,7 @@
 }
 
 .refresh-btn:hover {
-  background: var(--bg-tertiary);
+  background: var(--border-color);
   color: var(--text-primary);
 }
 
@@ -67,7 +68,7 @@
   width: 24px;
   height: 24px;
   border: 2px solid var(--border-color);
-  border-top-color: var(--accent-primary);
+  border-top-color: var(--text-secondary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

@@ -1,7 +1,11 @@
 .app {
-  min-height: 100vh;
+  flex: 1;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-primary);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .header {
@@ -9,8 +13,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.5rem;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
 }
 
 .header-left {
@@ -22,10 +27,7 @@
 .logo {
   font-size: 1.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--accent-primary), #a371f7);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text-primary);
 }
 
 .tagline {
@@ -44,13 +46,16 @@
   font-size: 0.875rem;
   color: var(--text-secondary);
   padding: 0.5rem 1rem;
-  background: var(--bg-tertiary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
 }
 
 .main {
   flex: 1;
   display: flex;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .editor-layout {
@@ -91,13 +96,13 @@
 }
 
 .btn-secondary {
-  background: var(--bg-tertiary);
+  background: var(--bg-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
 }
 
 .btn-secondary:hover {
-  background: var(--border-color);
+  background: var(--bg-tertiary);
 }
 
 .btn-success {

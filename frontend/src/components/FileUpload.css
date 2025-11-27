@@ -4,10 +4,8 @@
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: 
-    radial-gradient(circle at 20% 20%, rgba(88, 166, 255, 0.05) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(163, 113, 247, 0.05) 0%, transparent 50%),
-    var(--bg-primary);
+  background: var(--bg-primary);
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
 }
 
 .upload-content {
@@ -24,10 +22,7 @@
   font-size: 2rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text-primary);
 }
 
 .upload-hero p {
@@ -41,18 +36,18 @@
   padding: 3rem 2rem;
   text-align: center;
   transition: all 0.2s ease;
-  background: var(--bg-secondary);
+  background: var(--bg-tertiary);
   position: relative;
 }
 
 .dropzone:hover {
-  border-color: var(--accent-primary);
-  background: rgba(88, 166, 255, 0.05);
+  border-color: var(--text-secondary);
+  background: var(--bg-secondary);
 }
 
 .dropzone.dragging {
-  border-color: var(--accent-primary);
-  background: rgba(88, 166, 255, 0.1);
+  border-color: var(--text-primary);
+  background: var(--bg-secondary);
   transform: scale(1.01);
 }
 
@@ -81,7 +76,7 @@
 }
 
 .upload-icon {
-  color: var(--accent-primary);
+  color: var(--text-secondary);
   opacity: 0.8;
 }
 
@@ -103,7 +98,7 @@
   width: 40px;
   height: 40px;
   border: 3px solid var(--border-color);
-  border-top-color: var(--accent-primary);
+  border-top-color: var(--text-secondary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -132,7 +127,7 @@
   margin-top: 2rem;
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   overflow: hidden;
 }
 
@@ -141,7 +136,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 1.25rem;
-  background: rgba(88, 166, 255, 0.05);
+  background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-color);
   color: var(--text-secondary);
   font-size: 0.875rem;
@@ -149,7 +144,7 @@
 }
 
 .existing-files-header svg {
-  color: var(--accent-primary);
+  color: var(--text-secondary);
   opacity: 0.8;
 }
 
@@ -177,11 +172,11 @@
 }
 
 .existing-file-item:hover {
-  background: rgba(88, 166, 255, 0.08);
+  background: var(--bg-tertiary);
 }
 
 .existing-file-item:active {
-  background: rgba(88, 166, 255, 0.12);
+  background: var(--bg-secondary);
 }
 
 .file-icon {
@@ -191,9 +186,9 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: rgba(88, 166, 255, 0.1);
+  background: var(--bg-tertiary);
   border-radius: 8px;
-  color: var(--accent-primary);
+  color: var(--text-secondary);
 }
 
 .file-info {
@@ -246,7 +241,7 @@
   width: 16px;
   height: 16px;
   border: 2px solid var(--border-color);
-  border-top-color: var(--accent-primary);
+  border-top-color: var(--text-secondary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -263,13 +258,13 @@
   align-items: flex-start;
   gap: 0.75rem;
   padding: 1rem;
-  background: var(--bg-secondary);
+  background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
   border-radius: 8px;
 }
 
 .feature-icon {
-  color: var(--accent-primary);
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 

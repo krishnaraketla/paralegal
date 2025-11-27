@@ -87,24 +87,33 @@ async def get_onlyoffice_config(doc_id: str, request: Request):
         },
         "editorConfig": {
             "mode": "edit",
+            "header": False,
+            "user": {
+                "id": "1234567890",
+                "name": "User",
+                "email": "user@example.com"
+            },
             "callbackUrl": f"{docker_url}/api/onlyoffice/callback",
             "lang": "en",
             "customization": {
                 "autosave": True,
                 "chat": False,
                 "comments": True,
-                "compactHeader": False,
-                "compactToolbar": False,
+                "compactHeader": True,
+                "compactToolbar": True,
                 "feedback": False,
                 "forcesave": True,
                 "help": False,
-                "hideRightMenu": False,
+                "hideRightMenu": True,
                 "hideRulers": False,
-                "showReviewChanges": True,
+                "showReviewChanges": False,
                 "spellcheck": True,
                 "toolbarNoTabs": False,
                 "unit": "inch",
-                "zoom": 100
+                "zoom": 100,
+                "uiTheme": "gray",
+                "toolbar": "classic",
+                
             }
         },
         "documentType": "word"

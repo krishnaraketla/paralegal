@@ -25,7 +25,7 @@
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   color: var(--text-secondary);
 }
 
@@ -56,7 +56,8 @@
   font-size: 0.875rem;
   font-family: var(--font-mono);
   padding: 0.5rem 1rem;
-  background: var(--bg-tertiary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   margin-top: 1rem;
 }
@@ -65,7 +66,7 @@
   width: 32px;
   height: 32px;
   border: 3px solid var(--border-color);
-  border-top-color: var(--accent-primary);
+  border-top-color: var(--text-secondary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -79,7 +80,7 @@
 .editor-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(13, 17, 23, 0.8);
+  background: rgba(250, 248, 244, 0.92);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -94,5 +95,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  border-radius: 0 0 0 var(--radius-card);
+  overflow: hidden;
 }
 
