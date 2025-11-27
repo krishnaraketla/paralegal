@@ -1,7 +1,8 @@
 import os
 import jwt
 import requests
-from fastapi import APIRouter, Request, HTTPException
+from typing import Optional
+from fastapi import APIRouter, Request, HTTPException, Query
 from fastapi.responses import JSONResponse
 
 from app.config import STORAGE_PATH, ONLYOFFICE_JWT_SECRET, BACKEND_DOCKER_URL
@@ -59,7 +60,11 @@ async def onlyoffice_callback(request: Request):
 
 
 @router.get("/config/{doc_id}")
-async def get_onlyoffice_config(doc_id: str, request: Request):
+async def get_onlyoffice_config(
+    doc_id: str, 
+    request: Request,
+    filename: Optional[str] = Query(None, description="Original filename to display")
+):
     """Generate ONLYOFFICE editor configuration for a document"""
     
     docx_path = STORAGE_PATH / f"{doc_id}.docx"
@@ -71,11 +76,14 @@ async def get_onlyoffice_config(doc_id: str, request: Request):
     # This uses host.docker.internal to reach the host machine from Docker
     docker_url = BACKEND_DOCKER_URL.rstrip("/")
     
+    # Use provided filename or fall back to doc_id
+    display_title = filename if filename else f"{doc_id}.docx"
+    
     config = {
         "document": {
             "fileType": "docx",
             "key": doc_id,
-            "title": f"{doc_id}.docx",
+            "title": display_title,
             "url": f"{docker_url}/storage/{doc_id}.docx",
             "permissions": {
                 "edit": True,

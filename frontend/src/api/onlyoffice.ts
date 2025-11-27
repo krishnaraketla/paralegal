@@ -23,8 +23,9 @@ export interface OnlyOfficeConfig {
   documentType: string
 }
 
-export async function getOnlyOfficeConfig(documentId: string): Promise<OnlyOfficeConfig> {
-  const response = await api.get<OnlyOfficeConfig>(`/api/onlyoffice/config/${documentId}`)
+export async function getOnlyOfficeConfig(documentId: string, filename?: string): Promise<OnlyOfficeConfig> {
+  const params = filename ? { filename } : {}
+  const response = await api.get<OnlyOfficeConfig>(`/api/onlyoffice/config/${documentId}`, { params })
   return response.data
 }
 

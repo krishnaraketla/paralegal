@@ -54,6 +54,7 @@ function App() {
           <div className="editor-layout">
             <div className="editor-container">
               <DocumentEditor
+                key={document.id}
                 document={document}
                 onSpellcheck={handleSpellcheck}
                 isLoading={isLoading}

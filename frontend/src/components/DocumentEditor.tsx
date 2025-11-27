@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { DocumentEditor as OnlyOfficeEditor } from '@onlyoffice/document-editor-react'
 import { getOnlyOfficeConfig } from '../api/onlyoffice'
 import { getSpellcheck, type SpellError } from '../api/spellcheck'
@@ -23,21 +23,45 @@ export default function DocumentEditor({
   const [config, setConfig] = useState<Record<string, unknown> | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [editorReady, setEditorReady] = useState(false)
-  const [editorKey, setEditorKey] = useState(0)
   const spellcheckRan = useRef(false)
+  const editorInstanceRef = useRef<any | null>(null)
+  
+  // Generate a unique editor ID once per component mount
+  // This ensures OnlyOffice gets a fresh instance each time
+  const editorId = useMemo(() => `docEditor-${Date.now()}-${Math.random().toString(36).slice(2)}`, [])
+
+  // Clean up OnlyOffice editor instance when this component unmounts
+  useEffect(() => {
+    return () => {
+      try {
+        // Prefer the instance we captured, but also fall back to the global map
+        const globalEditor = (window as any)?.DocEditor
+        const instanceFromRef = editorInstanceRef.current
+        const instanceFromGlobal = globalEditor?.instances?.[editorId]
+        const instance = instanceFromRef || instanceFromGlobal
+
+        if (instance && typeof instance.destroyEditor === 'function') {
+          instance.destroyEditor()
+        }
+
+        if (globalEditor?.instances && globalEditor.instances[editorId]) {
+          delete globalEditor.instances[editorId]
+        }
+      } catch (cleanupError) {
+        console.error('Failed to clean up ONLYOFFICE instance', cleanupError)
+      } finally {
+        editorInstanceRef.current = null
+      }
+    }
+  }, [editorId])
 
   useEffect(() => {
     async function loadConfig() {
       try {
-        // Reset editor state when document changes
         setEditorReady(false)
-        setConfig(null)
-        
-        const configData = await getOnlyOfficeConfig(document.id)
+        const configData = await getOnlyOfficeConfig(document.id, document.filename)
         setConfig(configData as unknown as Record<string, unknown>)
         setError(null)
-        // Force editor remount with new key to avoid DOM conflicts
-        setEditorKey(prev => prev + 1)
       } catch (err) {
         setError('Failed to load document configuration')
         console.error('Config error:', err)
@@ -46,7 +70,7 @@ export default function DocumentEditor({
 
     loadConfig()
     spellcheckRan.current = false
-  }, [document.id])
+  }, [document.id, document.filename])
 
   useEffect(() => {
     async function runSpellcheck() {
@@ -69,6 +93,10 @@ export default function DocumentEditor({
   }, [editorReady, document.id, onSpellcheck, setIsLoading])
 
   // Memoize callbacks to prevent unnecessary re-renders
+  const handleAppReady = useCallback((instance: object) => {
+    editorInstanceRef.current = instance
+  }, [])
+
   const handleDocumentReady = useCallback(() => {
     setEditorReady(true)
   }, [])
@@ -108,11 +136,12 @@ export default function DocumentEditor({
 
   return (
     <div className="editor-wrapper">
-      <div key={`editor-${document.id}-${editorKey}`} className="editor-container">
+      <div className="editor-container">
         <OnlyOfficeEditor
-          id="docEditor"
+          id={editorId}
           documentServerUrl={ONLYOFFICE_URL}
           config={config}
+          events_onAppReady={handleAppReady}
           events_onDocumentReady={handleDocumentReady}
           events_onError={handleError}
         />
