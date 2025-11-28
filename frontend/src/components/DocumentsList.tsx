@@ -12,7 +12,6 @@ export default function DocumentsList({ caseId, caseName, onSelectDocument }: Do
   const [documents, setDocuments] = useState<DocumentResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -65,26 +64,6 @@ export default function DocumentsList({ caseId, caseName, onSelectDocument }: Do
       setIsUploading(false)
     }
   }, [caseId])
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-
-    const file = e.dataTransfer.files[0]
-    if (file) {
-      handleFile(file)
-    }
-  }, [handleFile])
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }, [])
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -177,29 +156,12 @@ export default function DocumentsList({ caseId, caseName, onSelectDocument }: Do
         </label>
       </div>
 
-      {/* Upload dropzone */}
-      <div
-        className={`upload-dropzone ${isDragging ? 'dragging' : ''} ${isUploading ? 'uploading' : ''}`}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-      >
-        {isUploading ? (
-          <>
-            <div className="loading-spinner" />
-            <span>Uploading...</span>
-          </>
-        ) : (
-          <>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            <span>Drop .docx files here to upload</span>
-          </>
-        )}
-      </div>
+      {isUploading && (
+        <div className="upload-status">
+          <div className="loading-spinner" />
+          <span>Uploading...</span>
+        </div>
+      )}
 
       {uploadError && (
         <div className="upload-error">
