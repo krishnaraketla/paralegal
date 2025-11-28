@@ -48,6 +48,12 @@ async def onlyoffice_callback(request: Request):
         if not download_url:
             return JSONResponse(content={"error": 1}, status_code=200)
         
+        # Rewrite localhost URLs to use Docker internal network hostname
+        # OnlyOffice sends URLs with localhost:8080, but from the backend container
+        # we need to use the Docker service name 'onlyoffice' to reach it
+        download_url = download_url.replace("localhost:8080", "onlyoffice")
+        download_url = download_url.replace("127.0.0.1:8080", "onlyoffice")
+        
         try:
             # Download the updated document from ONLYOFFICE
             response = requests.get(download_url, timeout=30)
@@ -164,7 +170,7 @@ async def get_onlyoffice_config(
                 "hideRightMenu": True,
                 "hideRulers": False,
                 "showReviewChanges": False,
-                "spellcheck": True,
+                "spellcheck": False,
                 "toolbarNoTabs": False,
                 "unit": "inch",
                 "zoom": 100,
