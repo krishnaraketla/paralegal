@@ -95,7 +95,8 @@
   overflow: hidden;
 }
 
-.connector-status {
+.connector-status,
+.plugin-status {
   position: absolute;
   top: 8px;
   right: 8px;

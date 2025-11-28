@@ -186,10 +186,35 @@
   border-radius: 8px;
   border: 1px solid #e8e4df;
   overflow: hidden;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.issue-item:hover {
+  border-color: #8b7355;
+  box-shadow: 0 2px 8px rgba(139, 115, 85, 0.15);
+}
+
+.issue-item.selected {
+  border-color: #2196F3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.issue-item:focus {
+  outline: none;
+  border-color: #2196F3;
 }
 
 .issue-header {
   padding: 10px 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.selected-indicator {
+  font-size: 14px;
+  opacity: 0.8;
 }
 
 .severity-badge {

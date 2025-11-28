@@ -10,6 +10,7 @@ interface DocumentEditorProps {
 
 export interface DocumentEditorRef {
   applyIssue: (issue: ProofreadingIssue) => void
+  searchAndSelect: (text: string) => void
 }
 
 const ONLYOFFICE_URL = import.meta.env.VITE_ONLYOFFICE_URL || 'http://localhost:8080'
@@ -17,7 +18,7 @@ const ONLYOFFICE_URL = import.meta.env.VITE_ONLYOFFICE_URL || 'http://localhost:
 const DocumentEditor = forwardRef<DocumentEditorRef, DocumentEditorProps>(
   function DocumentEditor({ document }, ref) {
     const [error, setError] = useState<string | null>(null)
-    const [connectorReady, setConnectorReady] = useState(false)
+    const [pluginReady, setPluginReady] = useState(false)
     const [iframeKey, setIframeKey] = useState(() => `iframe-${document.id}-${Date.now()}`)
     const iframeRef = useRef<HTMLIFrameElement | null>(null)
     const configLoadedRef = useRef(false)
@@ -25,7 +26,7 @@ const DocumentEditor = forwardRef<DocumentEditorRef, DocumentEditorProps>(
     // Reset iframe when document changes
     useEffect(() => {
       configLoadedRef.current = false
-      setConnectorReady(false)
+      setPluginReady(false)
       setIframeKey(`iframe-${document.id}-${Date.now()}`)
       setError(null)
     }, [document.id])
@@ -59,7 +60,7 @@ const DocumentEditor = forwardRef<DocumentEditorRef, DocumentEditorProps>(
       }
     }, [document.id, document.filename])
 
-    // Apply an issue to the document via iframe
+    // Apply an issue to the document via iframe (uses Automation API)
     const applyIssue = useCallback((issue: ProofreadingIssue) => {
       if (iframeRef.current?.contentWindow) {
         console.log('%c[EDITOR] Sending APPLY_ISSUE to iframe', 'color: #9C27B0; font-weight: bold;', issue)
@@ -72,10 +73,24 @@ const DocumentEditor = forwardRef<DocumentEditorRef, DocumentEditorProps>(
       }
     }, [])
 
-    // Expose applyIssue method via ref
+    // Search and select text in the document (uses plugin)
+    const searchAndSelect = useCallback((text: string) => {
+      if (iframeRef.current?.contentWindow) {
+        console.log('%c[EDITOR] Sending SEARCH_AND_SELECT to iframe', 'color: #2196F3; font-weight: bold;', { text })
+        iframeRef.current.contentWindow.postMessage({
+          type: 'SEARCH_AND_SELECT',
+          text
+        }, '*')
+      } else {
+        console.warn('[EDITOR] Cannot search - iframe not ready')
+      }
+    }, [])
+
+    // Expose methods via ref
     useImperativeHandle(ref, () => ({
-      applyIssue
-    }), [applyIssue])
+      applyIssue,
+      searchAndSelect
+    }), [applyIssue, searchAndSelect])
 
     // Handle messages from iframe
     useEffect(() => {
@@ -86,13 +101,21 @@ const DocumentEditor = forwardRef<DocumentEditorRef, DocumentEditorProps>(
           case 'IFRAME_READY':
             loadAndSendConfig()
             break
+          case 'PLUGIN_READY':
+            console.log('%c[EDITOR] Plugin ready for communication', 'color: #4CAF50; font-weight: bold;')
+            setPluginReady(true)
+            break
           case 'CONNECTOR_READY':
             console.log('%c[EDITOR] Automation API connector ready', 'color: #4CAF50; font-weight: bold;')
-            setConnectorReady(true)
             break
           case 'CONNECTOR_UNAVAILABLE':
-            console.warn('[EDITOR] Automation API unavailable:', data.reason)
-            setConnectorReady(false)
+            console.log('[EDITOR] Automation API unavailable, using plugin instead:', data.reason)
+            break
+          case 'SEARCH_AND_SELECT_SENT':
+            console.log('%c[EDITOR] Search command sent to plugin', 'color: #2196F3;', data.text)
+            break
+          case 'SEARCH_AND_SELECT_ERROR':
+            console.warn('[EDITOR] Search failed:', data.error)
             break
           case 'APPLY_ISSUE_RESULT':
             if (data.success) {
@@ -133,8 +156,8 @@ const DocumentEditor = forwardRef<DocumentEditorRef, DocumentEditorProps>(
 
     return (
       <div className="editor-wrapper">
-        {connectorReady && (
-          <div className="connector-status" title="Automation API connected">
+        {pluginReady && (
+          <div className="plugin-status" title="Plugin connected">
             <span className="status-dot"></span>
           </div>
         )}

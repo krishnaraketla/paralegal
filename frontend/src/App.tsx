@@ -13,11 +13,17 @@ export interface Document {
   url: string
 }
 
+// Editor ref type
+interface DocumentEditorRef {
+  applyIssue: (issue: ProofreadingIssue) => void
+  searchAndSelect: (text: string) => void
+}
+
 function App() {
   const [document, setDocument] = useState<Document | null>(null)
   const [issues, setIssues] = useState<ProofreadingIssue[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const editorRef = useRef<{ applyIssue: (issue: ProofreadingIssue) => void } | null>(null)
+  const editorRef = useRef<DocumentEditorRef | null>(null)
 
   const handleSelectDocument = (doc: DocumentResponse) => {
     setDocument({
@@ -58,6 +64,12 @@ function App() {
     setIssues(prev => prev.filter(i => i.id !== issueId))
   }, [])
 
+  const handleHighlightIssue = useCallback((issue: ProofreadingIssue) => {
+    if (editorRef.current) {
+      editorRef.current.searchAndSelect(issue.find)
+    }
+  }, [])
+
   return (
     <div className="app">
       <header className="header">
@@ -96,6 +108,7 @@ function App() {
               onProofreadComplete={handleProofreadComplete}
               onApplyIssue={handleApplyIssue}
               onDismissIssue={handleDismissIssue}
+              onHighlightIssue={handleHighlightIssue}
             />
           </div>
         )}

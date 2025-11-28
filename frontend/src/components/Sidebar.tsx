@@ -14,6 +14,7 @@ interface SidebarProps {
   onProofreadComplete: () => void
   onApplyIssue: (issue: ProofreadingIssue) => void
   onDismissIssue: (issueId: string) => void
+  onHighlightIssue: (issue: ProofreadingIssue) => void
 }
 
 export default function Sidebar({ 
@@ -25,6 +26,7 @@ export default function Sidebar({
   onProofreadComplete,
   onApplyIssue,
   onDismissIssue,
+  onHighlightIssue,
 }: SidebarProps) {
   const [activeTool, setActiveTool] = useState<Tool>('proofreading')
 
@@ -78,6 +80,7 @@ export default function Sidebar({
             onProofreadComplete={onProofreadComplete}
             onApplyIssue={onApplyIssue}
             onDismissIssue={onDismissIssue}
+            onHighlightIssue={onHighlightIssue}
           />
         )
       case 'summarizer':

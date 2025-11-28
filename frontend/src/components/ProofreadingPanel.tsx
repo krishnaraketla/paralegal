@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useState } from 'react'
 import { 
   streamProofread, 
   getCategoryInfo, 
@@ -16,6 +16,7 @@ interface ProofreadingPanelProps {
   onProofreadComplete: () => void
   onApplyIssue: (issue: ProofreadingIssue) => void
   onDismissIssue: (issueId: string) => void
+  onHighlightIssue: (issue: ProofreadingIssue) => void
 }
 
 export default function ProofreadingPanel({
@@ -27,8 +28,10 @@ export default function ProofreadingPanel({
   onProofreadComplete,
   onApplyIssue,
   onDismissIssue,
+  onHighlightIssue,
 }: ProofreadingPanelProps) {
   const abortRef = useRef<(() => void) | null>(null)
+  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null)
 
   const handleStartProofread = useCallback(() => {
     console.log('%c[USER ACTION] Starting proofreading', 'color: #9C27B0; font-weight: bold;', {
@@ -40,6 +43,7 @@ export default function ProofreadingPanel({
       abortRef.current()
     }
     
+    setSelectedIssueId(null)
     onProofreadStart()
     
     abortRef.current = streamProofread(documentId, {
@@ -57,16 +61,29 @@ export default function ProofreadingPanel({
     })
   }, [documentId, onProofreadStart, onIssueReceived, onProofreadComplete])
 
-  const handleApply = useCallback((issue: ProofreadingIssue) => {
+  const handleIssueClick = useCallback((issue: ProofreadingIssue) => {
+    console.log('%c[USER ACTION] Issue clicked - highlighting in document', 'color: #2196F3; font-weight: bold;', {
+      find: issue.find,
+    })
+    setSelectedIssueId(issue.id)
+    onHighlightIssue(issue)
+  }, [onHighlightIssue])
+
+  const handleApply = useCallback((issue: ProofreadingIssue, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent issue click handler
     console.log('%c[USER ACTION] Apply issue', 'color: #9C27B0; font-weight: bold;', issue)
     onApplyIssue(issue)
     onDismissIssue(issue.id)
   }, [onApplyIssue, onDismissIssue])
 
-  const handleDismiss = useCallback((issueId: string) => {
+  const handleDismiss = useCallback((issueId: string, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent issue click handler
     console.log('%c[USER ACTION] Dismiss issue', 'color: #9C27B0; font-weight: bold;', { issueId })
     onDismissIssue(issueId)
-  }, [onDismissIssue])
+    if (selectedIssueId === issueId) {
+      setSelectedIssueId(null)
+    }
+  }, [onDismissIssue, selectedIssueId])
 
   // Group issues by category
   const groupedIssues = issues.reduce((acc, issue) => {
@@ -147,8 +164,16 @@ export default function ProofreadingPanel({
                     
                     {categoryIssues.map((issue) => {
                       const severityInfo = getSeverityInfo(issue.severity)
+                      const isSelected = selectedIssueId === issue.id
                       return (
-                        <div key={issue.id} className="issue-item">
+                        <div 
+                          key={issue.id} 
+                          className={`issue-item ${isSelected ? 'selected' : ''}`}
+                          onClick={() => handleIssueClick(issue)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => e.key === 'Enter' && handleIssueClick(issue)}
+                        >
                           <div className="issue-header">
                             <span 
                               className="severity-badge"
@@ -156,6 +181,11 @@ export default function ProofreadingPanel({
                             >
                               {severityInfo.label}
                             </span>
+                            {isSelected && (
+                              <span className="selected-indicator" title="Highlighted in document">
+                                👁
+                              </span>
+                            )}
                           </div>
                           
                           <div className="issue-content">
@@ -178,7 +208,7 @@ export default function ProofreadingPanel({
                             {issue.type === 'replacement' && issue.replace && (
                               <button 
                                 className="btn-apply"
-                                onClick={() => handleApply(issue)}
+                                onClick={(e) => handleApply(issue, e)}
                                 title="Apply this fix to the document"
                               >
                                 Apply Fix
@@ -186,7 +216,7 @@ export default function ProofreadingPanel({
                             )}
                             <button 
                               className="btn-dismiss"
-                              onClick={() => handleDismiss(issue.id)}
+                              onClick={(e) => handleDismiss(issue.id, e)}
                               title="Dismiss this issue"
                             >
                               ✕
@@ -205,10 +235,9 @@ export default function ProofreadingPanel({
 
       <div className="panel-footer">
         <p className="panel-hint">
-          Click "Apply Fix" to automatically correct issues in the document.
+          Click an issue to highlight it in the document.
         </p>
       </div>
     </div>
   )
 }
-

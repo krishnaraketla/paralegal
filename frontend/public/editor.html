@@ -35,9 +35,13 @@
   </div>
 
   <script>
+    // Plugin GUID - must match config.json
+    const PARALEGAL_PLUGIN_GUID = 'asc.{7C5D5E6A-4F3B-4E2D-9A1B-8C7D6E5F4A3B}';
+    
     // Wait for config from parent window
     let editorInstance = null;
     let connector = null;
+    let pluginReady = false;
     
     window.addEventListener('message', function(event) {
       // Verify origin for security (in production, check specific origin)
@@ -57,6 +61,11 @@
         console.log('[IFRAME] Received APPLY_ISSUE message', data.issue);
         applyIssue(data.issue);
       }
+      
+      if (data.type === 'SEARCH_AND_SELECT') {
+        console.log('[IFRAME] Received SEARCH_AND_SELECT message', data.text);
+        searchAndSelect(data.text);
+      }
     });
 
     function initEditor(config, documentServerUrl, editorId) {
@@ -69,7 +78,7 @@
         // Clear loading message
         document.getElementById('editor-container').innerHTML = '';
         
-        // Create the editor
+        // Create the editor with plugin enabled
         editorInstance = new DocsAPI.DocEditor('editor-container', {
           ...config,
           events: {
@@ -77,26 +86,29 @@
               console.log('[IFRAME] Editor app ready');
               window.parent.postMessage({ type: 'EDITOR_APP_READY' }, '*');
               
-              // Try to create Automation API connector
+              // Try to create Automation API connector (for Developer edition)
               try {
                 if (typeof editorInstance.createConnector === 'function') {
                   connector = editorInstance.createConnector();
                   console.log('[IFRAME] Automation API connector created');
                   window.parent.postMessage({ type: 'CONNECTOR_READY' }, '*');
                 } else {
-                  console.log('[IFRAME] Automation API not available (requires Developer edition)');
+                  console.log('[IFRAME] Automation API not available (using plugin instead)');
                   window.parent.postMessage({ 
                     type: 'CONNECTOR_UNAVAILABLE',
-                    reason: 'Automation API requires OnlyOffice Developer edition'
+                    reason: 'Using plugin for document interaction'
                   }, '*');
                 }
               } catch (e) {
-                console.warn('[IFRAME] Failed to create connector:', e);
-                window.parent.postMessage({ 
-                  type: 'CONNECTOR_UNAVAILABLE',
-                  reason: e.message
-                }, '*');
+                console.warn('[IFRAME] Connector not available, using plugin:', e.message);
               }
+              
+              // Mark plugin as ready after a short delay to ensure it's loaded
+              setTimeout(function() {
+                pluginReady = true;
+                console.log('[IFRAME] Plugin messaging ready');
+                window.parent.postMessage({ type: 'PLUGIN_READY' }, '*');
+              }, 1000);
             },
             onDocumentReady: function() {
               console.log('[IFRAME] Document ready');
@@ -118,6 +130,7 @@
 
     function destroyEditor() {
       connector = null;
+      pluginReady = false;
       if (editorInstance && typeof editorInstance.destroyEditor === 'function') {
         try {
           editorInstance.destroyEditor();
@@ -129,12 +142,71 @@
     }
     
     /**
-     * Apply a proofreading issue to the document
+     * Search for text and select it in the document.
+     * Broadcasts via postMessage to reach the plugin across iframe boundaries.
+     * @param {string} text - Text to search for
+     */
+    function searchAndSelect(text) {
+      if (!text) {
+        console.warn('[IFRAME] No text provided for search');
+        return;
+      }
+      
+      console.log('[IFRAME] Broadcasting search via postMessage:', text);
+      
+      var msg = { type: 'PARALEGAL_SEARCH', text: text, timestamp: Date.now() };
+      
+      // Recursively post to all reachable frames
+      function postToAllFrames(win, depth) {
+        if (depth > 10) return; // Prevent infinite recursion
+        
+        try {
+          // Post to this window
+          win.postMessage(msg, '*');
+        } catch(e) {
+          console.log('[IFRAME] Could not post to window at depth ' + depth + ':', e.message);
+        }
+        
+        // Try to access child frames
+        try {
+          for (var i = 0; i < win.frames.length; i++) {
+            postToAllFrames(win.frames[i], depth + 1);
+          }
+        } catch(e) {
+          // Cross-origin - can't access frames array, but try direct iframe elements
+        }
+      }
+      
+      // Start from this window and go down
+      postToAllFrames(window, 0);
+      
+      // Also post to all iframe elements directly (in case frames array is restricted)
+      var iframes = document.getElementsByTagName('iframe');
+      for (var i = 0; i < iframes.length; i++) {
+        try {
+          iframes[i].contentWindow.postMessage(msg, '*');
+          console.log('[IFRAME] Posted to child iframe', i);
+        } catch(e) {
+          console.log('[IFRAME] Could not post to iframe ' + i + ':', e.message);
+        }
+      }
+      
+      // Also keep window property as backup for same-origin scenarios
+      window.paralegalSearchCommand = {
+        type: 'searchAndSelect',
+        text: text,
+        timestamp: Date.now()
+      };
+      
+      window.parent.postMessage({
+        type: 'SEARCH_AND_SELECT_SENT',
+        text: text
+      }, '*');
+    }
+    
+    /**
+     * Apply a proofreading issue to the document (legacy - uses Automation API)
      * @param {Object} issue - The proofreading issue
-     * @param {string} issue.type - 'replacement' | 'comment' | 'highlight'
-     * @param {string} issue.find - Text to find
-     * @param {string} issue.replace - Replacement text (for type=replacement)
-     * @param {string} issue.explanation - Explanation for comments
      */
     function applyIssue(issue) {
       if (!connector) {
@@ -142,7 +214,7 @@
         window.parent.postMessage({ 
           type: 'APPLY_ISSUE_RESULT',
           success: false,
-          error: 'Automation API not available'
+          error: 'Automation API not available - use Search & Select instead'
         }, '*');
         return;
       }
@@ -152,7 +224,6 @@
       try {
         switch (issue.type) {
           case 'replacement':
-            // Use SearchAndReplace method
             connector.executeMethod('SearchAndReplace', [{
               searchString: issue.find,
               replaceString: issue.replace || '',
@@ -165,34 +236,6 @@
                 issueId: issue.id
               }, '*');
             });
-            break;
-            
-          case 'comment':
-            // First search for the text, then add a comment
-            // Note: This is a simplified version - full implementation would need
-            // to select the text first then add comment
-            connector.executeMethod('AddComment', [{
-              text: `${issue.explanation}\n\nFound: "${issue.find}"`
-            }], function(result) {
-              console.log('[IFRAME] AddComment result:', result);
-              window.parent.postMessage({ 
-                type: 'APPLY_ISSUE_RESULT',
-                success: true,
-                issueId: issue.id
-              }, '*');
-            });
-            break;
-            
-          case 'highlight':
-            // For highlighting, we could use text formatting
-            // This is a placeholder - actual implementation depends on API availability
-            console.log('[IFRAME] Highlight not fully implemented yet');
-            window.parent.postMessage({ 
-              type: 'APPLY_ISSUE_RESULT',
-              success: false,
-              issueId: issue.id,
-              error: 'Highlight not implemented'
-            }, '*');
             break;
             
           default:

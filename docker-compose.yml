@@ -13,6 +13,8 @@ services:
     volumes:
       - onlyoffice_data:/var/www/onlyoffice/Data
       - onlyoffice_logs:/var/log/onlyoffice
+      # Custom plugin for proofreading integration
+      - ./onlyoffice-plugin/paralegal:/var/www/onlyoffice/documentserver/sdkjs-plugins/paralegal
     restart: unless-stopped
 
   backend:

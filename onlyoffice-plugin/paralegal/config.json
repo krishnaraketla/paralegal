@@ -1,0 +1,35 @@
+{
+  "name": "Paralegal",
+  "nameLocale": {
+    "en": "Paralegal"
+  },
+  "guid": "asc.{7C5D5E6A-4F3B-4E2D-9A1B-8C7D6E5F4A3B}",
+  "version": "1.0.0",
+  "minVersion": "6.3.0",
+  
+  "variations": [
+    {
+      "description": "Paralegal proofreading integration",
+      "descriptionLocale": {
+        "en": "Paralegal proofreading integration"
+      },
+      "url": "index.html",
+      "icons": ["resources/light/icon.png", "resources/light/icon@2x.png"],
+      "icons2": [
+        {
+          "style": "light",
+          "100%": { "normal": "resources/light/icon.png" },
+          "200%": { "normal": "resources/light/icon@2x.png" }
+        }
+      ],
+      "isViewer": false,
+      "EditorsSupport": ["word"],
+      "isVisual": false,
+      "isSystem": true,
+      "initDataType": "none",
+      "initOnSelectionChanged": false,
+      "buttons": []
+    }
+  ]
+}
+
