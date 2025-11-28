@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import UserHome from './components/UserHome'
 import DocumentEditor from './components/DocumentEditor'
 import Sidebar from './components/Sidebar'
 import type { DocumentResponse } from './api/documents'
-import type { SpellError } from './api/spellcheck'
+import type { ProofreadingIssue } from './api/proofreading'
 import './App.css'
 
 // Document type for the editor (compatible with both old and new API)
@@ -15,8 +15,9 @@ export interface Document {
 
 function App() {
   const [document, setDocument] = useState<Document | null>(null)
-  const [spellErrors, setSpellErrors] = useState<SpellError[]>([])
+  const [issues, setIssues] = useState<ProofreadingIssue[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const editorRef = useRef<{ applyIssue: (issue: ProofreadingIssue) => void } | null>(null)
 
   const handleSelectDocument = (doc: DocumentResponse) => {
     setDocument({
@@ -24,13 +25,38 @@ function App() {
       filename: doc.original_filename,
       url: doc.url,
     })
-    setSpellErrors([])
+    setIssues([])
+    setIsLoading(false)
   }
 
   const handleClose = () => {
     setDocument(null)
-    setSpellErrors([])
+    setIssues([])
+    setIsLoading(false)
   }
+
+  const handleProofreadStart = useCallback(() => {
+    setIsLoading(true)
+    setIssues([])
+  }, [])
+
+  const handleIssueReceived = useCallback((issue: ProofreadingIssue) => {
+    setIssues(prev => [...prev, issue])
+  }, [])
+
+  const handleProofreadComplete = useCallback(() => {
+    setIsLoading(false)
+  }, [])
+
+  const handleApplyIssue = useCallback((issue: ProofreadingIssue) => {
+    if (editorRef.current) {
+      editorRef.current.applyIssue(issue)
+    }
+  }, [])
+
+  const handleDismissIssue = useCallback((issueId: string) => {
+    setIssues(prev => prev.filter(i => i.id !== issueId))
+  }, [])
 
   return (
     <div className="app">
@@ -58,15 +84,18 @@ function App() {
               <DocumentEditor
                 key={document.id}
                 document={document}
+                ref={editorRef}
               />
             </div>
             <Sidebar
-              spellErrors={spellErrors}
+              issues={issues}
               isLoading={isLoading}
               documentId={document.id}
-              onRefresh={() => {
-                setIsLoading(true)
-              }}
+              onProofreadStart={handleProofreadStart}
+              onIssueReceived={handleIssueReceived}
+              onProofreadComplete={handleProofreadComplete}
+              onApplyIssue={handleApplyIssue}
+              onDismissIssue={handleDismissIssue}
             />
           </div>
         )}

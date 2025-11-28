@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Database
 from app.seed import seed_default_data
-from app.routers import documents, spellcheck, onlyoffice, users, organizations, cases, storage
+from app.routers import documents, spellcheck, onlyoffice, users, organizations, cases, storage, proofreading
 
 
 @asynccontextmanager
@@ -43,6 +43,7 @@ app.include_router(organizations.router, prefix="/api/organizations", tags=["org
 app.include_router(cases.router, prefix="/api/cases", tags=["cases"])
 app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
 app.include_router(spellcheck.router, prefix="/api/spellcheck", tags=["spellcheck"])
+app.include_router(proofreading.router, prefix="/api/proofread", tags=["proofreading"])
 app.include_router(onlyoffice.router, prefix="/api/onlyoffice", tags=["onlyoffice"])
 
 # Storage endpoint for serving files from GridFS

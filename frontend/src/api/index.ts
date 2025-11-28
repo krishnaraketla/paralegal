@@ -40,12 +40,21 @@ export {
   type UploadResponse,
 } from './documents'
 
-// Spellcheck API
+// Spellcheck API (legacy)
 export {
   getSpellcheck,
   type SpellError,
   type SpellcheckResponse,
 } from './spellcheck'
+
+// Proofreading API (SSE streaming)
+export {
+  streamProofread,
+  getCategoryInfo,
+  getSeverityInfo,
+  type ProofreadingIssue,
+  type ProofreadingCallbacks,
+} from './proofreading'
 
 // OnlyOffice API
 export {

@@ -1,24 +1,32 @@
 import { useState } from 'react'
-import type { SpellError } from '../api/spellcheck'
-import SpellcheckPanel from './SpellcheckPanel'
+import type { ProofreadingIssue } from '../api/proofreading'
+import ProofreadingPanel from './ProofreadingPanel'
 import './Sidebar.css'
 
-type Tool = 'spellcheck' | 'proofreader' | 'summarizer'
+type Tool = 'proofreading' | 'summarizer'
 
 interface SidebarProps {
-  spellErrors: SpellError[]
+  issues: ProofreadingIssue[]
   isLoading: boolean
   documentId: string
-  onRefresh: () => void
+  onProofreadStart: () => void
+  onIssueReceived: (issue: ProofreadingIssue) => void
+  onProofreadComplete: () => void
+  onApplyIssue: (issue: ProofreadingIssue) => void
+  onDismissIssue: (issueId: string) => void
 }
 
 export default function Sidebar({ 
-  spellErrors, 
+  issues, 
   isLoading, 
   documentId,
-  onRefresh,
+  onProofreadStart,
+  onIssueReceived,
+  onProofreadComplete,
+  onApplyIssue,
+  onDismissIssue,
 }: SidebarProps) {
-  const [activeTool, setActiveTool] = useState<Tool>('spellcheck')
+  const [activeTool, setActiveTool] = useState<Tool>('proofreading')
 
   const handleToolChange = (toolId: Tool) => {
     console.log('%c[USER ACTION] Sidebar tool changed', 'color: #9C27B0; font-weight: bold;', {
@@ -30,8 +38,8 @@ export default function Sidebar({
 
   const tools: { id: Tool; label: string; icon: JSX.Element }[] = [
     {
-      id: 'spellcheck',
-      label: 'Spellcheck',
+      id: 'proofreading',
+      label: 'Proofreading',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 3v6" />
@@ -39,16 +47,6 @@ export default function Sidebar({
           <path d="M5 10l7 10 7-10" />
           <path d="M17 17l4 4" />
           <path d="M21 17l-4 4" />
-        </svg>
-      )
-    },
-    {
-      id: 'proofreader',
-      label: 'Proofreader',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-          <circle cx="12" cy="12" r="3" />
         </svg>
       )
     },
@@ -69,25 +67,18 @@ export default function Sidebar({
 
   const renderPanel = () => {
     switch (activeTool) {
-      case 'spellcheck':
+      case 'proofreading':
         return (
-          <SpellcheckPanel
-            errors={spellErrors}
+          <ProofreadingPanel
+            issues={issues}
             isLoading={isLoading}
             documentId={documentId}
-            onRefresh={onRefresh}
+            onProofreadStart={onProofreadStart}
+            onIssueReceived={onIssueReceived}
+            onProofreadComplete={onProofreadComplete}
+            onApplyIssue={onApplyIssue}
+            onDismissIssue={onDismissIssue}
           />
-        )
-      case 'proofreader':
-        return (
-          <div className="coming-soon-panel">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-            <h3>Proofreader</h3>
-            <p>AI-powered proofreading agents coming soon.</p>
-          </div>
         )
       case 'summarizer':
         return (

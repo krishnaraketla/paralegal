@@ -37,6 +37,7 @@
   <script>
     // Wait for config from parent window
     let editorInstance = null;
+    let connector = null;
     
     window.addEventListener('message', function(event) {
       // Verify origin for security (in production, check specific origin)
@@ -50,6 +51,11 @@
       if (data.type === 'DESTROY_EDITOR') {
         console.log('[IFRAME] Received DESTROY_EDITOR message');
         destroyEditor();
+      }
+      
+      if (data.type === 'APPLY_ISSUE') {
+        console.log('[IFRAME] Received APPLY_ISSUE message', data.issue);
+        applyIssue(data.issue);
       }
     });
 
@@ -70,6 +76,27 @@
             onAppReady: function() {
               console.log('[IFRAME] Editor app ready');
               window.parent.postMessage({ type: 'EDITOR_APP_READY' }, '*');
+              
+              // Try to create Automation API connector
+              try {
+                if (typeof editorInstance.createConnector === 'function') {
+                  connector = editorInstance.createConnector();
+                  console.log('[IFRAME] Automation API connector created');
+                  window.parent.postMessage({ type: 'CONNECTOR_READY' }, '*');
+                } else {
+                  console.log('[IFRAME] Automation API not available (requires Developer edition)');
+                  window.parent.postMessage({ 
+                    type: 'CONNECTOR_UNAVAILABLE',
+                    reason: 'Automation API requires OnlyOffice Developer edition'
+                  }, '*');
+                }
+              } catch (e) {
+                console.warn('[IFRAME] Failed to create connector:', e);
+                window.parent.postMessage({ 
+                  type: 'CONNECTOR_UNAVAILABLE',
+                  reason: e.message
+                }, '*');
+              }
             },
             onDocumentReady: function() {
               console.log('[IFRAME] Document ready');
@@ -90,6 +117,7 @@
     }
 
     function destroyEditor() {
+      connector = null;
       if (editorInstance && typeof editorInstance.destroyEditor === 'function') {
         try {
           editorInstance.destroyEditor();
@@ -99,10 +127,90 @@
       }
       editorInstance = null;
     }
+    
+    /**
+     * Apply a proofreading issue to the document
+     * @param {Object} issue - The proofreading issue
+     * @param {string} issue.type - 'replacement' | 'comment' | 'highlight'
+     * @param {string} issue.find - Text to find
+     * @param {string} issue.replace - Replacement text (for type=replacement)
+     * @param {string} issue.explanation - Explanation for comments
+     */
+    function applyIssue(issue) {
+      if (!connector) {
+        console.warn('[IFRAME] Connector not available, cannot apply issue');
+        window.parent.postMessage({ 
+          type: 'APPLY_ISSUE_RESULT',
+          success: false,
+          error: 'Automation API not available'
+        }, '*');
+        return;
+      }
+      
+      console.log('[IFRAME] Applying issue:', issue);
+      
+      try {
+        switch (issue.type) {
+          case 'replacement':
+            // Use SearchAndReplace method
+            connector.executeMethod('SearchAndReplace', [{
+              searchString: issue.find,
+              replaceString: issue.replace || '',
+              matchCase: true
+            }], function(result) {
+              console.log('[IFRAME] SearchAndReplace result:', result);
+              window.parent.postMessage({ 
+                type: 'APPLY_ISSUE_RESULT',
+                success: true,
+                issueId: issue.id
+              }, '*');
+            });
+            break;
+            
+          case 'comment':
+            // First search for the text, then add a comment
+            // Note: This is a simplified version - full implementation would need
+            // to select the text first then add comment
+            connector.executeMethod('AddComment', [{
+              text: `${issue.explanation}\n\nFound: "${issue.find}"`
+            }], function(result) {
+              console.log('[IFRAME] AddComment result:', result);
+              window.parent.postMessage({ 
+                type: 'APPLY_ISSUE_RESULT',
+                success: true,
+                issueId: issue.id
+              }, '*');
+            });
+            break;
+            
+          case 'highlight':
+            // For highlighting, we could use text formatting
+            // This is a placeholder - actual implementation depends on API availability
+            console.log('[IFRAME] Highlight not fully implemented yet');
+            window.parent.postMessage({ 
+              type: 'APPLY_ISSUE_RESULT',
+              success: false,
+              issueId: issue.id,
+              error: 'Highlight not implemented'
+            }, '*');
+            break;
+            
+          default:
+            console.warn('[IFRAME] Unknown issue type:', issue.type);
+        }
+      } catch (e) {
+        console.error('[IFRAME] Error applying issue:', e);
+        window.parent.postMessage({ 
+          type: 'APPLY_ISSUE_RESULT',
+          success: false,
+          issueId: issue.id,
+          error: e.message
+        }, '*');
+      }
+    }
 
     // Notify parent that iframe is ready
     window.parent.postMessage({ type: 'IFRAME_READY' }, '*');
   </script>
 </body>
 </html>
-
