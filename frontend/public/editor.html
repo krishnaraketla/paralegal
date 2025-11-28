@@ -205,51 +205,68 @@
     }
     
     /**
-     * Apply a proofreading issue to the document (legacy - uses Automation API)
+     * Apply a proofreading issue to the document.
+     * Broadcasts via postMessage to reach the plugin across iframe boundaries.
      * @param {Object} issue - The proofreading issue
      */
     function applyIssue(issue) {
-      if (!connector) {
-        console.warn('[IFRAME] Connector not available, cannot apply issue');
+      if (!issue || !issue.find) {
+        console.warn('[IFRAME] Invalid issue provided for apply');
         window.parent.postMessage({ 
           type: 'APPLY_ISSUE_RESULT',
           success: false,
-          error: 'Automation API not available - use Search & Select instead'
+          error: 'Invalid issue - missing find text'
         }, '*');
         return;
       }
       
-      console.log('[IFRAME] Applying issue:', issue);
+      console.log('[IFRAME] Broadcasting replace via postMessage:', issue);
       
-      try {
-        switch (issue.type) {
-          case 'replacement':
-            connector.executeMethod('SearchAndReplace', [{
-              searchString: issue.find,
-              replaceString: issue.replace || '',
-              matchCase: true
-            }], function(result) {
-              console.log('[IFRAME] SearchAndReplace result:', result);
-              window.parent.postMessage({ 
-                type: 'APPLY_ISSUE_RESULT',
-                success: true,
-                issueId: issue.id
-              }, '*');
-            });
-            break;
-            
-          default:
-            console.warn('[IFRAME] Unknown issue type:', issue.type);
+      var msg = { 
+        type: 'PARALEGAL_REPLACE', 
+        find: issue.find,
+        replace: issue.replace || '',
+        issueId: issue.id,
+        timestamp: Date.now() 
+      };
+      
+      // Recursively post to all reachable frames (same pattern as searchAndSelect)
+      function postToAllFrames(win, depth) {
+        if (depth > 10) return; // Prevent infinite recursion
+        
+        try {
+          win.postMessage(msg, '*');
+        } catch(e) {
+          console.log('[IFRAME] Could not post to window at depth ' + depth + ':', e.message);
         }
-      } catch (e) {
-        console.error('[IFRAME] Error applying issue:', e);
-        window.parent.postMessage({ 
-          type: 'APPLY_ISSUE_RESULT',
-          success: false,
-          issueId: issue.id,
-          error: e.message
-        }, '*');
+        
+        try {
+          for (var i = 0; i < win.frames.length; i++) {
+            postToAllFrames(win.frames[i], depth + 1);
+          }
+        } catch(e) {
+          // Cross-origin - can't access frames array
+        }
       }
+      
+      // Start from this window and go down
+      postToAllFrames(window, 0);
+      
+      // Also post to all iframe elements directly (in case frames array is restricted)
+      var iframes = document.getElementsByTagName('iframe');
+      for (var i = 0; i < iframes.length; i++) {
+        try {
+          iframes[i].contentWindow.postMessage(msg, '*');
+          console.log('[IFRAME] Posted replace to child iframe', i);
+        } catch(e) {
+          console.log('[IFRAME] Could not post to iframe ' + i + ':', e.message);
+        }
+      }
+      
+      window.parent.postMessage({
+        type: 'APPLY_ISSUE_SENT',
+        issueId: issue.id
+      }, '*');
     }
 
     // Notify parent that iframe is ready

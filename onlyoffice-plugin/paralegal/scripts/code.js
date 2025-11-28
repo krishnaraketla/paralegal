@@ -24,6 +24,10 @@
         console.log('[Paralegal Plugin] Processing search from postMessage:', event.data.text);
         handleSearchAndSelect(event.data.text);
       }
+      if (event.data && event.data.type === 'PARALEGAL_REPLACE' && event.data.find) {
+        console.log('[Paralegal Plugin] Processing replace from postMessage:', event.data.find, '->', event.data.replace);
+        handleSearchAndReplace(event.data.find, event.data.replace, event.data.issueId);
+      }
     }, false);
     
     // Keep polling as backup for same-origin scenarios
@@ -145,6 +149,40 @@
         console.log('[Paralegal Plugin] Found', result.found, 'matches (case-sensitive:', result.caseSensitive + ')');
       } else {
         console.log('[Paralegal Plugin] No matches found for:', searchText);
+      }
+    });
+  }
+
+  /**
+   * Search for text in the document and replace the first occurrence.
+   * Uses executeMethod to access the native SearchAndReplace functionality.
+   */
+  function handleSearchAndReplace(findText, replaceText, issueId) {
+    console.log('[Paralegal Plugin] Replacing:', findText, '->', replaceText);
+    
+    // Use the native SearchAndReplace method via executeMethod
+    window.Asc.plugin.executeMethod("SearchAndReplace", [{
+      searchString: findText,
+      replaceString: replaceText,
+      matchCase: true
+    }], function(result) {
+      console.log('[Paralegal Plugin] SearchAndReplace result:', result);
+      if (result) {
+        console.log('[Paralegal Plugin] Replaced successfully (case-sensitive)');
+      } else {
+        // Try case-insensitive as fallback
+        console.log('[Paralegal Plugin] Case-sensitive failed, trying case-insensitive');
+        window.Asc.plugin.executeMethod("SearchAndReplace", [{
+          searchString: findText,
+          replaceString: replaceText,
+          matchCase: false
+        }], function(result2) {
+          if (result2) {
+            console.log('[Paralegal Plugin] Replaced successfully (case-insensitive)');
+          } else {
+            console.log('[Paralegal Plugin] No matches found to replace for:', findText);
+          }
+        });
       }
     });
   }
