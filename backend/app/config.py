@@ -22,3 +22,7 @@ BACKEND_DOCKER_URL = os.getenv("BACKEND_DOCKER_URL", "http://host.docker.interna
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {".docx"}
 
+# Gemini AI configuration for spellcheck
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+

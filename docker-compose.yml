@@ -32,6 +32,9 @@ services:
       # Get it from: MongoDB Atlas -> Database -> Connect -> Drivers -> Connection String
       - MONGODB_URI=${MONGODB_URI}
       - DATABASE_NAME=paralegal
+      # Gemini API key for LLM-based spellcheck
+      # Get it from: https://aistudio.google.com/apikey
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     depends_on:
       - onlyoffice
     restart: unless-stopped

@@ -1,8 +1,11 @@
 import logging
-from typing import List, Dict, Any
-from spellchecker import SpellChecker
-from docx import Document
+import json
 import re
+from typing import List, Dict, Any
+from docx import Document
+import google.generativeai as genai
+
+from app.config import GEMINI_API_KEY, GEMINI_MODEL
 
 logger = logging.getLogger(__name__)
 
@@ -12,99 +15,51 @@ class DocumentParseError(Exception):
     pass
 
 
-def edit_distance(s1: str, s2: str) -> int:
-    """Calculate Levenshtein edit distance between two strings."""
-    if len(s1) < len(s2):
-        return edit_distance(s2, s1)
-    
-    if len(s2) == 0:
-        return len(s1)
-    
-    previous_row = range(len(s2) + 1)
-    for i, c1 in enumerate(s1):
-        current_row = [i + 1]
-        for j, c2 in enumerate(s2):
-            insertions = previous_row[j + 1] + 1
-            deletions = current_row[j] + 1
-            substitutions = previous_row[j] + (c1 != c2)
-            current_row.append(min(insertions, deletions, substitutions))
-        previous_row = current_row
-    
-    return previous_row[-1]
-
-
 class SpellcheckService:
     def __init__(self):
-        self.spell = SpellChecker()
-        # Add common technical/business terms that might be flagged incorrectly
-        self.spell.word_frequency.load_words([
-            'docx', 'pdf', 'api', 'url', 'html', 'css', 'javascript',
-            'frontend', 'backend', 'onlyoffice', 'paralegal'
-        ])
+        if GEMINI_API_KEY:
+            genai.configure(api_key=GEMINI_API_KEY)
+            self.model = genai.GenerativeModel(GEMINI_MODEL)
+        else:
+            self.model = None
+            logger.warning("GEMINI_API_KEY not configured - spellcheck will be disabled")
     
-    def extract_words(self, text: str) -> List[str]:
-        """Extract words from text, ignoring numbers and special characters"""
-        # Match words (letters only, at least 2 characters)
-        words = re.findall(r'\b[a-zA-Z]{2,}\b', text)
-        return words
-    
-    def check_document(self, file_path: str) -> List[Dict[str, Any]]:
-        """Check a DOCX document for spelling errors"""
-        
+    def _extract_document_text(self, file_path: str) -> tuple[str, List[Dict[str, Any]]]:
+        """
+        Extract text from DOCX document.
+        Returns tuple of (full_text, paragraph_info) where paragraph_info contains
+        text and start position for context extraction.
+        """
         try:
             doc = Document(file_path)
         except KeyError as e:
-            # This happens when the DOCX file has non-standard structure
-            # (e.g., created by ONLYOFFICE with strict OOXML format)
             logger.warning(f"Cannot parse document for spellcheck: {e}")
             raise DocumentParseError(f"Document format not supported for spellcheck: {e}")
         except Exception as e:
             logger.warning(f"Failed to open document for spellcheck: {e}")
             raise DocumentParseError(f"Failed to open document: {e}")
         
-        errors = []
-        seen_words = set()  # Track unique misspelled words
+        paragraphs = []
+        full_text_parts = []
+        current_pos = 0
         
         for para_idx, paragraph in enumerate(doc.paragraphs):
             text = paragraph.text
-            if not text.strip():
-                continue
-            
-            words = self.extract_words(text)
-            
-            for word in words:
-                word_lower = word.lower()
-                
-                # Skip if we've already reported this word
-                if word_lower in seen_words:
-                    continue
-                
-                # Check if word is misspelled
-                if word_lower not in self.spell:
-                    seen_words.add(word_lower)
-                    
-                    # Get suggestions
-                    suggestions = list(self.spell.candidates(word_lower) or [])
-                    # Sort by edit distance (most likely first)
-                    suggestions = sorted(suggestions, 
-                                        key=lambda x: edit_distance(word_lower, x))[:5]
-                    
-                    # Get context (surrounding text)
-                    context = self._get_context(text, word)
-                    
-                    errors.append({
-                        "word": word,
-                        "suggestions": suggestions,
-                        "paragraph": para_idx,
-                        "context": context
-                    })
+            if text.strip():
+                paragraphs.append({
+                    "index": para_idx,
+                    "text": text,
+                    "start_pos": current_pos
+                })
+                full_text_parts.append(text)
+                current_pos += len(text) + 1  # +1 for newline
         
-        return errors
+        full_text = "\n".join(full_text_parts)
+        return full_text, paragraphs
     
     def _get_context(self, text: str, word: str, context_chars: int = 50) -> str:
         """Get surrounding context for a word"""
         try:
-            # Find the word in text (case insensitive)
             pattern = re.compile(re.escape(word), re.IGNORECASE)
             match = pattern.search(text)
             
@@ -114,7 +69,6 @@ class SpellcheckService:
                 
                 context = text[start:end]
                 
-                # Add ellipsis if truncated
                 if start > 0:
                     context = "..." + context
                 if end < len(text):
@@ -125,4 +79,109 @@ class SpellcheckService:
             pass
         
         return text[:100] + "..." if len(text) > 100 else text
+    
+    def _find_paragraph_for_word(self, word: str, paragraphs: List[Dict[str, Any]]) -> int:
+        """Find which paragraph contains a word"""
+        for para in paragraphs:
+            if word.lower() in para["text"].lower():
+                return para["index"]
+        return 0
+    
+    def check_document(self, file_path: str) -> List[Dict[str, Any]]:
+        """Check a DOCX document for spelling errors using Gemini"""
+        
+        if not self.model:
+            logger.warning("Gemini not configured, returning empty results")
+            return []
+        
+        # Extract document text
+        full_text, paragraphs = self._extract_document_text(file_path)
+        
+        if not full_text.strip():
+            return []
+        
+        # Create prompt for Gemini
+        prompt = """You are a legal document proofreader. Analyze the following text and identify ONLY spelling errors (misspelled words).
 
+IMPORTANT RULES:
+- Only identify words that are MISSPELLED (typos, incorrect spelling)
+- Do NOT flag grammatical issues, punctuation, or formatting
+- Do NOT flag proper nouns, names, or legal terms that are correctly spelled
+- Do NOT flag abbreviations or acronyms
+- Report each unique misspelled word only ONCE, even if it appears multiple times
+
+Return your response as a JSON array. Each object should have:
+- "word": the misspelled word exactly as it appears in the text (preserve original case)
+- "correction": the correct spelling
+
+If there are no spelling errors, return an empty array: []
+
+TEXT TO ANALYZE:
+---
+""" + full_text + """
+---
+
+Return ONLY the JSON array, no other text or explanation."""
+
+        try:
+            response = self.model.generate_content(prompt)
+            response_text = response.text.strip()
+            
+            # Extract JSON from response (handle markdown code blocks)
+            if response_text.startswith("```"):
+                # Remove markdown code block
+                lines = response_text.split("\n")
+                json_lines = []
+                in_block = False
+                for line in lines:
+                    if line.startswith("```"):
+                        in_block = not in_block
+                        continue
+                    if in_block or not line.startswith("```"):
+                        json_lines.append(line)
+                response_text = "\n".join(json_lines).strip()
+            
+            # Parse JSON response
+            spelling_errors = json.loads(response_text)
+            
+            if not isinstance(spelling_errors, list):
+                logger.warning(f"Unexpected response format: {type(spelling_errors)}")
+                return []
+            
+            # Convert to our format
+            errors = []
+            seen_words = set()
+            
+            for error in spelling_errors:
+                word = error.get("word", "")
+                correction = error.get("correction", "")
+                
+                if not word or not correction:
+                    continue
+                
+                # Skip duplicates
+                word_lower = word.lower()
+                if word_lower in seen_words:
+                    continue
+                seen_words.add(word_lower)
+                
+                # Find context and paragraph
+                context = self._get_context(full_text, word)
+                paragraph = self._find_paragraph_for_word(word, paragraphs)
+                
+                errors.append({
+                    "word": word,
+                    "suggestions": [correction],
+                    "paragraph": paragraph,
+                    "context": context
+                })
+            
+            return errors
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse Gemini response as JSON: {e}")
+            logger.error(f"Response was: {response_text[:500]}")
+            return []
+        except Exception as e:
+            logger.error(f"Gemini API call failed: {e}")
+            return []
