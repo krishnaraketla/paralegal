@@ -1,11 +1,16 @@
-import os
+"""
+OnlyOffice integration router - handles callbacks and config generation
+"""
+from datetime import datetime
+from typing import Optional
+from bson import ObjectId
 import jwt
 import requests
-from typing import Optional
 from fastapi import APIRouter, Request, HTTPException, Query
 from fastapi.responses import JSONResponse
 
-from app.config import STORAGE_PATH, ONLYOFFICE_JWT_SECRET, BACKEND_DOCKER_URL
+from app.config import ONLYOFFICE_JWT_SECRET, BACKEND_DOCKER_URL
+from app.database import get_documents_collection, get_gridfs
 
 router = APIRouter()
 
@@ -47,11 +52,44 @@ async def onlyoffice_callback(request: Request):
             # Download the updated document from ONLYOFFICE
             response = requests.get(download_url, timeout=30)
             response.raise_for_status()
+            content = response.content
             
-            # Save the document using the original doc_id (not the session key)
-            file_path = STORAGE_PATH / f"{doc_id}.docx"
-            with open(file_path, "wb") as f:
-                f.write(response.content)
+            # Get the document metadata
+            documents = get_documents_collection()
+            doc = await documents.find_one({"_id": ObjectId(doc_id)})
+            
+            if not doc:
+                print(f"Document not found: {doc_id}")
+                return JSONResponse(content={"error": 1})
+            
+            # Get GridFS
+            gridfs = get_gridfs()
+            
+            # Delete old file from GridFS
+            try:
+                await gridfs.delete(ObjectId(doc["gridfs_file_id"]))
+            except Exception as e:
+                print(f"Warning: Failed to delete old GridFS file: {e}")
+            
+            # Upload new file to GridFS
+            new_gridfs_id = await gridfs.upload_from_stream(
+                doc["original_filename"],
+                content,
+                metadata={
+                    "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                }
+            )
+            
+            # Update document metadata with new GridFS file ID
+            await documents.update_one(
+                {"_id": ObjectId(doc_id)},
+                {
+                    "$set": {
+                        "gridfs_file_id": str(new_gridfs_id),
+                        "updated_at": datetime.utcnow(),
+                    }
+                }
+            )
             
             return JSONResponse(content={"error": 0})
         except Exception as e:
@@ -71,21 +109,23 @@ async def get_onlyoffice_config(
 ):
     """Generate ONLYOFFICE editor configuration for a document"""
     
-    docx_path = STORAGE_PATH / f"{doc_id}.docx"
+    documents = get_documents_collection()
     
-    if not docx_path.exists():
+    try:
+        doc = await documents.find_one({"_id": ObjectId(doc_id)})
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid document ID")
+    
+    if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     
     # Use BACKEND_DOCKER_URL for URLs that OnlyOffice (in Docker) needs to access
-    # This uses host.docker.internal to reach the host machine from Docker
     docker_url = BACKEND_DOCKER_URL.rstrip("/")
     
-    # Use provided filename or fall back to doc_id
-    display_title = filename if filename else f"{doc_id}.docx"
+    # Use provided filename or fall back to original filename
+    display_title = filename if filename else doc["original_filename"]
     
-    # NUCLEAR OPTION: Use unique session key so each editor session is completely separate
-    # This prevents ONLYOFFICE from caching/reusing sessions when switching documents
-    # Format: docId__sessionKey (double underscore as separator for parsing in callback)
+    # Use unique session key so each editor session is completely separate
     document_key = f"{doc_id}__{session_key}" if session_key else doc_id
     
     config = {
@@ -93,12 +133,12 @@ async def get_onlyoffice_config(
             "fileType": "docx",
             "key": document_key,
             "title": display_title,
-            "url": f"{docker_url}/storage/{doc_id}.docx",
+            "url": f"{docker_url}/storage/{doc_id}",
             "permissions": {
                 "edit": True,
                 "download": True,
                 "print": True,
-                "review": True,  # Enable Track Changes
+                "review": True,
                 "comment": True,
             }
         },
@@ -106,7 +146,7 @@ async def get_onlyoffice_config(
             "mode": "edit",
             "header": False,
             "user": {
-                "id": "1234567890",
+                "id": doc.get("created_by", "1234567890"),
                 "name": "User",
                 "email": "user@example.com"
             },
@@ -130,7 +170,6 @@ async def get_onlyoffice_config(
                 "zoom": 100,
                 "uiTheme": "gray",
                 "toolbar": "classic",
-                
             }
         },
         "documentType": "word"
@@ -141,4 +180,3 @@ async def get_onlyoffice_config(
     config["token"] = token
     
     return config
-

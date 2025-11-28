@@ -1,14 +1,43 @@
 // API Client
 export { api } from './client'
 
+// Defaults API
+export {
+  getDefaults,
+  getDefaultUserId,
+  getDefaultOrgId,
+  type DefaultsResponse,
+} from './defaults'
+
+// Organizations API
+export {
+  listOrganizations,
+  getOrganization,
+  createOrganization,
+  deleteOrganization,
+  type Organization,
+} from './organizations'
+
+// Cases API
+export {
+  listCases,
+  getCase,
+  createCase,
+  deleteCase,
+  type Case,
+  type CreateCaseRequest,
+} from './cases'
+
 // Documents API
 export {
   uploadDocument,
   listDocuments,
+  getDocument,
   deleteDocument,
-  type UploadResponse,
+  toStoredDocument,
+  type DocumentResponse,
   type StoredDocument,
-  type ListDocumentsResponse,
+  type UploadResponse,
 } from './documents'
 
 // Spellcheck API
@@ -23,4 +52,3 @@ export {
   getOnlyOfficeConfig,
   type OnlyOfficeConfig,
 } from './onlyoffice'
-

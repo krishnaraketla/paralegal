@@ -1,126 +1,107 @@
-<!-- 25a7717a-8f64-4e33-b1fa-69a5968c3c01 9bb3a257-b734-406d-b03d-fb41eebe20bf -->
-# MongoDB Backend Architecture Plan
+<!-- 25a7717a-8f64-4e33-b1fa-69a5968c3c01 96bf380d-2bff-4198-b1ec-2255f2646980 -->
+# Frontend User Home Navigation Plan
 
-## Data Model
+## Overview
+
+Replace the `FileUpload` component with a `UserHome` component that provides navigation:
+
+**Organizations → Cases → Documents** with breadcrumbs.
+
+## Navigation Structure
 
 ```
-Users
-├── _id: ObjectId
-├── email: string (unique)
-├── name: string
-└── created_at: datetime
-
-Organizations
-├── _id: ObjectId
-├── name: string
-├── created_by: ObjectId (ref: Users)
-└── created_at: datetime
-
-Memberships (users <-> orgs many-to-many)
-├── _id: ObjectId
-├── user_id: ObjectId
-├── organization_id: ObjectId
-└── joined_at: datetime
-
-Cases
-├── _id: ObjectId
-├── organization_id: ObjectId
-├── name: string
-├── description: string
-├── created_by: ObjectId
-└── created_at: datetime
-
-Documents
-├── _id: ObjectId
-├── case_id: ObjectId
-├── original_filename: string
-├── gridfs_file_id: ObjectId
-├── created_by: ObjectId
-├── created_at: datetime
-└── updated_at: datetime
+Home (Organizations list)
+├── Create Organization button
+└── [Organization] 
+    ├── Breadcrumb: Home > Org Name
+    ├── Create Case button  
+    └── [Case]
+        ├── Breadcrumb: Home > Org Name > Case Name
+        ├── Upload Document button
+        └── [Document] → Opens in Editor
 ```
 
-## Key Implementation Details
+## New Components
 
-### MongoDB Setup
+| Component | Purpose |
 
-- Use **Motor** (async MongoDB driver) with existing FastAPI
-- Add `motor` and `pymongo` to requirements (pymongo already present)
-- Atlas connection string via `MONGODB_URI` env var
-- Create indexes on foreign keys and `email`
+|-----------|---------|
 
-### GridFS File Storage
+| `UserHome.tsx` | Container with navigation state and breadcrumbs |
 
-- Replace filesystem storage with GridFS
-- Replace `StaticFiles` mount with dynamic streaming endpoint at `/storage/{doc_id}`
-- OnlyOffice callback will download and save to GridFS instead of filesystem
+| `Breadcrumbs.tsx` | Clickable breadcrumb trail |
 
-### Key File Changes
+| `OrganizationsList.tsx` | List organizations, create new |
+
+| `CasesList.tsx` | List cases in an org, create new |
+
+| `DocumentsList.tsx` | List documents in a case, upload new |
+
+| `CreateModal.tsx` | Reusable modal for creating org/case |
+
+## New API Clients
+
+Create `frontend/src/api/` files:
+
+- `organizations.ts` - CRUD for organizations
+- `cases.ts` - CRUD for cases  
+- `defaults.ts` - Fetch default user/org IDs
+
+Update `documents.ts` to use new endpoints with `case_id`.
+
+## State Management
+
+`UserHome` manages navigation state:
+
+```typescript
+type View = 
+  | { level: 'organizations' }
+  | { level: 'cases', orgId: string, orgName: string }
+  | { level: 'documents', orgId: string, orgName: string, caseId: string, caseName: string }
+```
+
+Breadcrumbs derived from this state.
+
+## Key Changes to Existing Files
 
 | File | Changes |
 
 |------|---------|
 
-| [backend/app/config.py](backend/app/config.py) | Add `MONGODB_URI`, remove `STORAGE_PATH` |
+| [App.tsx](frontend/src/App.tsx) | Replace `FileUpload` with `UserHome`, pass `onSelectDocument` |
 
-| [backend/app/database.py](backend/app/database.py) | **New** - Motor client, GridFS setup |
+| [documents.ts](frontend/src/api/documents.ts) | Update to use new API (requires `case_id`) |
 
-| [backend/app/models/](backend/app/models/) | Pydantic models for each entity |
+| [DocumentsPanel.tsx](frontend/src/components/DocumentsPanel.tsx) | Update to fetch by case_id or remove (functionality in UserHome) |
 
-| [backend/app/routers/documents.py](backend/app/routers/documents.py) | Rewrite: CRUD with MongoDB + GridFS |
+## Design Notes
 
-| [backend/app/routers/onlyoffice.py](backend/app/routers/onlyoffice.py) | Update callback to save to GridFS |
-
-| [backend/app/main.py](backend/app/main.py) | Remove StaticFiles, add `/storage/{doc_id}` streaming route, add new routers |
-
-| [docker-compose.yml](docker-compose.yml) | Add `MONGODB_URI` env var, remove `document_storage` volume |
-
-### New Routers
-
-- `routers/users.py` - User CRUD (minimal for MVP)
-- `routers/organizations.py` - Org CRUD + membership management
-- `routers/cases.py` - Case CRUD within orgs
-
-### MVP Default Data
-
-- Seed a default user on startup: `Default User <default@paralegal.local>`
-- Seed a default organization: `Default Organization`
-- Auto-assign default user to default org
-
-### API Structure (proposed)
-
-```
-GET/POST   /api/users
-GET/POST   /api/organizations
-POST       /api/organizations/{org_id}/members  (add user)
-GET/POST   /api/organizations/{org_id}/cases
-GET/POST   /api/cases/{case_id}/documents
-GET        /storage/{doc_id}  (stream from GridFS)
-```
-
-## What You Still Need to Think About
-
-1. **Atlas Setup**: Create a free M0 cluster, get connection string
-2. **Frontend Updates**: Will need to update document fetching to include case context
-3. **Document Listing**: Currently lists all docs - will need to scope by case
-4. **Auth (later)**: When ready, add JWT auth, protect routes, use real user context
-
-## Out of Scope for This Plan
-
-- Authentication/login (MVP uses default user)
-- Role-based permissions
-- Document versioning
-- Frontend changes (separate task)
+- Keep existing warm cream/beige color palette
+- Cards for each item with hover states
+- Empty states with helpful prompts
+- Loading states while fetching
+- Modal dialogs for create forms
 
 ### To-dos
 
-- [ ] Create database.py with Motor client, GridFS, and connection management
-- [ ] Create Pydantic models for User, Organization, Membership, Case, Document
-- [ ] Create users router with basic CRUD
-- [ ] Create organizations router with CRUD and membership management
-- [ ] Create cases router scoped to organizations
-- [ ] Rewrite documents router to use MongoDB + GridFS, scoped to cases
-- [ ] Update OnlyOffice callback to save files to GridFS
-- [ ] Replace StaticFiles with streaming endpoint for GridFS files
-- [ ] Add startup event to seed default user and organization
-- [ ] Update config.py and docker-compose.yml with MongoDB settings
+- [x] Create database.py with Motor client, GridFS, and connection management
+- [x] Create Pydantic models for User, Organization, Membership, Case, Document
+- [x] Create users router with basic CRUD
+- [x] Create organizations router with CRUD and membership management
+- [x] Create cases router scoped to organizations
+- [x] Rewrite documents router to use MongoDB + GridFS, scoped to cases
+- [x] Update OnlyOffice callback to save files to GridFS
+- [x] Replace StaticFiles with streaming endpoint for GridFS files
+- [x] Add startup event to seed default user and organization
+- [x] Update config.py and docker-compose.yml with MongoDB settings
+- [x] Create database.py with Motor client, GridFS, and connection management
+- [ ] Create API clients: organizations.ts, cases.ts, defaults.ts
+- [ ] Update documents.ts API to work with case_id parameter
+- [ ] Create Breadcrumbs component
+- [ ] Create reusable CreateModal component for org/case creation
+- [ ] Create OrganizationsList component
+- [ ] Create CasesList component
+- [ ] Create DocumentsList component with upload
+- [ ] Create UserHome container component with navigation state
+- [ ] Update App.tsx to use UserHome instead of FileUpload
+- [ ] Remove or repurpose FileUpload and old DocumentsPanel

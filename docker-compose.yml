@@ -24,12 +24,14 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
-      - document_storage:/app/storage
     environment:
       - ONLYOFFICE_URL=http://onlyoffice
-      - STORAGE_PATH=/app/storage
       - BACKEND_URL=http://backend:8000
       - ONLYOFFICE_JWT_SECRET=${ONLYOFFICE_JWT_SECRET}
+      # MongoDB Atlas connection string - replace with your own
+      # Get it from: MongoDB Atlas -> Database -> Connect -> Drivers -> Connection String
+      - MONGODB_URI=${MONGODB_URI}
+      - DATABASE_NAME=paralegal
     depends_on:
       - onlyoffice
     restart: unless-stopped
@@ -54,5 +56,3 @@ services:
 volumes:
   onlyoffice_data:
   onlyoffice_logs:
-  document_storage:
-

@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import FileUpload from './components/FileUpload'
+import UserHome from './components/UserHome'
 import DocumentEditor from './components/DocumentEditor'
 import Sidebar from './components/Sidebar'
+import type { DocumentResponse } from './api/documents'
 import type { SpellError } from './api/spellcheck'
 import './App.css'
 
+// Document type for the editor (compatible with both old and new API)
 export interface Document {
   id: string
   filename: string
@@ -16,8 +18,12 @@ function App() {
   const [spellErrors, setSpellErrors] = useState<SpellError[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleUpload = (doc: Document) => {
-    setDocument(doc)
+  const handleSelectDocument = (doc: DocumentResponse) => {
+    setDocument({
+      id: doc.id,
+      filename: doc.original_filename,
+      url: doc.url,
+    })
     setSpellErrors([])
   }
 
@@ -45,7 +51,7 @@ function App() {
 
       <main className="main">
         {!document ? (
-          <FileUpload onUpload={handleUpload} />
+          <UserHome onSelectDocument={handleSelectDocument} />
         ) : (
           <div className="editor-layout">
             <div className="editor-container">
@@ -61,8 +67,6 @@ function App() {
               onRefresh={() => {
                 setIsLoading(true)
               }}
-              onSelectDocument={handleUpload}
-              onDocumentDeleted={handleClose}
             />
           </div>
         )}
@@ -72,4 +76,3 @@ function App() {
 }
 
 export default App
-

@@ -1,11 +1,20 @@
-import uuid
-import os
-import json
+"""
+Documents router - CRUD with MongoDB + GridFS, scoped to cases
+"""
+from datetime import datetime
+from typing import List
 from pathlib import Path
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse
+from bson import ObjectId
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 
-from app.config import STORAGE_PATH, ALLOWED_EXTENSIONS, BACKEND_URL
+from app.config import ALLOWED_EXTENSIONS, BACKEND_URL
+from app.database import (
+    get_documents_collection,
+    get_cases_collection,
+    get_users_collection,
+    get_gridfs,
+)
+from app.models.document import DocumentResponse
 
 router = APIRouter()
 
@@ -14,30 +23,17 @@ def get_file_extension(filename: str) -> str:
     return Path(filename).suffix.lower()
 
 
-def get_metadata_path(doc_id: str) -> Path:
-    """Get the metadata file path for a document"""
-    return STORAGE_PATH / f"{doc_id}.meta.json"
-
-
-def save_metadata(doc_id: str, original_filename: str):
-    """Save document metadata including original filename"""
-    metadata = {"original_filename": original_filename}
-    with open(get_metadata_path(doc_id), "w") as f:
-        json.dump(metadata, f)
-
-
-def load_metadata(doc_id: str) -> dict:
-    """Load document metadata, returns empty dict if not found"""
-    meta_path = get_metadata_path(doc_id)
-    if meta_path.exists():
-        with open(meta_path, "r") as f:
-            return json.load(f)
-    return {}
-
-
-@router.post("/upload")
-async def upload_document(file: UploadFile = File(...)):
-    """Upload a DOCX document"""
+@router.post("", response_model=DocumentResponse)
+async def upload_document(
+    case_id: str,
+    created_by: str,
+    file: UploadFile = File(...),
+):
+    """Upload a document to a case"""
+    documents = get_documents_collection()
+    cases = get_cases_collection()
+    users = get_users_collection()
+    gridfs = get_gridfs()
     
     # Validate file extension
     ext = get_file_extension(file.filename or "")
@@ -47,96 +43,143 @@ async def upload_document(file: UploadFile = File(...)):
             detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
         )
     
-    # Generate unique ID and filename
-    doc_id = str(uuid.uuid4())
-    safe_filename = f"{doc_id}{ext}"
-    file_path = STORAGE_PATH / safe_filename
-    
-    # Save file
+    # Verify case exists
     try:
-        contents = await file.read()
-        with open(file_path, "wb") as f:
-            f.write(contents)
-        # Save metadata with original filename
-        save_metadata(doc_id, file.filename or safe_filename)
+        case = await cases.find_one({"_id": ObjectId(case_id)})
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid case ID")
+    
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    
+    # Verify user exists
+    try:
+        user = await users.find_one({"_id": ObjectId(created_by)})
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Read file content
+    try:
+        content = await file.read()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to read file: {str(e)}")
     
-    return {
-        "id": doc_id,
-        "filename": file.filename,
-        "stored_filename": safe_filename,
-        "url": f"{BACKEND_URL}/storage/{safe_filename}"
+    # Store file in GridFS
+    try:
+        gridfs_file_id = await gridfs.upload_from_stream(
+            file.filename or "document.docx",
+            content,
+            metadata={
+                "content_type": file.content_type or "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to store file: {str(e)}")
+    
+    now = datetime.utcnow()
+    
+    # Create document metadata
+    doc_data = {
+        "case_id": case_id,
+        "original_filename": file.filename or "document.docx",
+        "gridfs_file_id": str(gridfs_file_id),
+        "created_by": created_by,
+        "created_at": now,
+        "updated_at": now,
     }
+    
+    result = await documents.insert_one(doc_data)
+    doc_id = str(result.inserted_id)
+    
+    return DocumentResponse(
+        id=doc_id,
+        case_id=case_id,
+        original_filename=doc_data["original_filename"],
+        created_by=created_by,
+        created_at=now,
+        updated_at=now,
+        url=f"{BACKEND_URL}/storage/{doc_id}",
+    )
 
 
-@router.get("/{doc_id}")
+@router.get("", response_model=List[DocumentResponse])
+async def list_documents(case_id: str = Query(..., description="Case ID to list documents for")):
+    """List all documents in a case"""
+    documents = get_documents_collection()
+    cases = get_cases_collection()
+    
+    # Verify case exists
+    try:
+        case = await cases.find_one({"_id": ObjectId(case_id)})
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid case ID")
+    
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    
+    result = []
+    async for doc in documents.find({"case_id": case_id}):
+        result.append(DocumentResponse(
+            id=str(doc["_id"]),
+            case_id=doc["case_id"],
+            original_filename=doc["original_filename"],
+            created_by=doc["created_by"],
+            created_at=doc["created_at"],
+            updated_at=doc["updated_at"],
+            url=f"{BACKEND_URL}/storage/{str(doc['_id'])}",
+        ))
+    
+    return result
+
+
+@router.get("/{doc_id}", response_model=DocumentResponse)
 async def get_document(doc_id: str):
-    """Get document metadata for ONLYOFFICE integration"""
+    """Get document metadata"""
+    documents = get_documents_collection()
     
-    # Find the document file
-    docx_path = STORAGE_PATH / f"{doc_id}.docx"
+    try:
+        doc = await documents.find_one({"_id": ObjectId(doc_id)})
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid document ID")
     
-    if not docx_path.exists():
+    if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    metadata = load_metadata(doc_id)
-    filename = metadata.get("original_filename", f"{doc_id}.docx")
-    
-    return {
-        "id": doc_id,
-        "filename": filename,
-        "url": f"{BACKEND_URL}/storage/{doc_id}.docx",
-        "key": doc_id,  # ONLYOFFICE document key
-    }
-
-
-@router.get("")
-async def list_documents():
-    """List all uploaded documents"""
-    
-    # Pre-load all metadata files in one pass for efficiency
-    metadata_cache = {}
-    for meta_path in STORAGE_PATH.glob("*.meta.json"):
-        doc_id = meta_path.stem.replace(".meta", "")
-        try:
-            with open(meta_path, "r") as f:
-                metadata_cache[doc_id] = json.load(f)
-        except Exception:
-            pass
-    
-    documents = []
-    for file_path in STORAGE_PATH.glob("*.docx"):
-        doc_id = file_path.stem
-        metadata = metadata_cache.get(doc_id, {})
-        # Use original filename from metadata, fall back to stored filename
-        filename = metadata.get("original_filename", file_path.name)
-        documents.append({
-            "id": doc_id,
-            "filename": filename,
-            "url": f"{BACKEND_URL}/storage/{file_path.name}"
-        })
-    
-    return {"documents": documents}
+    return DocumentResponse(
+        id=str(doc["_id"]),
+        case_id=doc["case_id"],
+        original_filename=doc["original_filename"],
+        created_by=doc["created_by"],
+        created_at=doc["created_at"],
+        updated_at=doc["updated_at"],
+        url=f"{BACKEND_URL}/storage/{doc_id}",
+    )
 
 
 @router.delete("/{doc_id}")
 async def delete_document(doc_id: str):
-    """Delete a document"""
-    
-    docx_path = STORAGE_PATH / f"{doc_id}.docx"
-    
-    if not docx_path.exists():
-        raise HTTPException(status_code=404, detail="Document not found")
+    """Delete a document and its file from GridFS"""
+    documents = get_documents_collection()
+    gridfs = get_gridfs()
     
     try:
-        os.remove(docx_path)
-        # Also remove metadata file if it exists
-        meta_path = get_metadata_path(doc_id)
-        if meta_path.exists():
-            os.remove(meta_path)
+        doc = await documents.find_one({"_id": ObjectId(doc_id)})
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid document ID")
+    
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # Delete file from GridFS
+    try:
+        await gridfs.delete(ObjectId(doc["gridfs_file_id"]))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
+        print(f"Warning: Failed to delete GridFS file: {e}")
+    
+    # Delete document metadata
+    await documents.delete_one({"_id": ObjectId(doc_id)})
     
     return {"message": "Document deleted successfully"}
-

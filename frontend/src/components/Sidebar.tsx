@@ -1,19 +1,15 @@
 import { useState } from 'react'
-import type { Document } from '../App'
 import type { SpellError } from '../api/spellcheck'
 import SpellcheckPanel from './SpellcheckPanel'
-import DocumentsPanel from './DocumentsPanel'
 import './Sidebar.css'
 
-type Tool = 'documents' | 'spellcheck' | 'proofreader' | 'summarizer'
+type Tool = 'spellcheck' | 'proofreader' | 'summarizer'
 
 interface SidebarProps {
   spellErrors: SpellError[]
   isLoading: boolean
   documentId: string
   onRefresh: () => void
-  onSelectDocument: (doc: Document) => void
-  onDocumentDeleted: () => void
 }
 
 export default function Sidebar({ 
@@ -21,10 +17,8 @@ export default function Sidebar({
   isLoading, 
   documentId,
   onRefresh,
-  onSelectDocument,
-  onDocumentDeleted
 }: SidebarProps) {
-  const [activeTool, setActiveTool] = useState<Tool>('documents')
+  const [activeTool, setActiveTool] = useState<Tool>('spellcheck')
 
   const handleToolChange = (toolId: Tool) => {
     console.log('%c[USER ACTION] Sidebar tool changed', 'color: #9C27B0; font-weight: bold;', {
@@ -35,15 +29,6 @@ export default function Sidebar({
   }
 
   const tools: { id: Tool; label: string; icon: JSX.Element }[] = [
-    {
-      id: 'documents',
-      label: 'Documents',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-        </svg>
-      )
-    },
     {
       id: 'spellcheck',
       label: 'Spellcheck',
@@ -84,14 +69,6 @@ export default function Sidebar({
 
   const renderPanel = () => {
     switch (activeTool) {
-      case 'documents':
-        return (
-          <DocumentsPanel 
-            onSelectDocument={onSelectDocument}
-            currentDocumentId={documentId}
-            onDocumentDeleted={onDocumentDeleted}
-          />
-        )
       case 'spellcheck':
         return (
           <SpellcheckPanel
@@ -149,4 +126,3 @@ export default function Sidebar({
     </aside>
   )
 }
-

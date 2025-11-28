@@ -1,9 +1,8 @@
 import os
-from pathlib import Path
 
-# Storage configuration
-STORAGE_PATH = Path(os.getenv("STORAGE_PATH", "./storage"))
-STORAGE_PATH.mkdir(parents=True, exist_ok=True)
+# MongoDB configuration
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+DATABASE_NAME = os.getenv("DATABASE_NAME", "paralegal")
 
 # ONLYOFFICE configuration
 ONLYOFFICE_URL = os.getenv("ONLYOFFICE_URL", "http://localhost:8080")
