@@ -41,6 +41,25 @@ services:
       - onlyoffice
     restart: unless-stopped
 
+  agent:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
+    container_name: paralegal-agent
+    ports:
+      - "8001:8001"
+    environment:
+      # Google API key for Gemini/ADK
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_MODEL=gemini-2.0-flash
+      - AGENT_PORT=8001
+      # MongoDB connection for document access
+      - MONGODB_URI=${MONGODB_URI}
+      - DATABASE_NAME=paralegal
+    depends_on:
+      - backend
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./frontend
@@ -54,8 +73,10 @@ services:
     environment:
       - VITE_API_URL=http://localhost:8000
       - VITE_ONLYOFFICE_URL=http://localhost:8080
+      - VITE_AGENT_URL=http://localhost:8001
     depends_on:
       - backend
+      - agent
     restart: unless-stopped
 
 volumes:

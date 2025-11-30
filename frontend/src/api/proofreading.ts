@@ -1,11 +1,12 @@
 /**
  * Proofreading API with SSE streaming support
+ * Connects to the agent service for multi-agent proofreading
  */
 
 export interface ProofreadingIssue {
   id: string
   type: 'replacement' | 'comment' | 'highlight'
-  category: 'spelling' | 'grammar' | 'legal' | 'formatting'
+  category: 'spelling' | 'grammar' | 'consistency' | 'formatting'
   severity: 'error' | 'warning' | 'suggestion'
   find: string
   replace?: string
@@ -13,28 +14,47 @@ export interface ProofreadingIssue {
   explanation: string
 }
 
+export interface ProofreadingStatus {
+  message: string
+  agent?: string
+}
+
 export interface ProofreadingCallbacks {
   onIssue: (issue: ProofreadingIssue) => void
+  onStatus?: (status: ProofreadingStatus) => void
   onComplete: (total: number) => void
   onError?: (error: string) => void
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// Agent service URL (separate from main backend)
+const AGENT_URL = import.meta.env.VITE_AGENT_URL || 'http://localhost:8001'
 
 /**
- * Stream proofreading issues from the backend using Server-Sent Events.
+ * Stream proofreading issues from the agent service using Server-Sent Events.
  * Returns an abort function to cancel the stream.
  */
 export function streamProofread(
   documentId: string,
   callbacks: ProofreadingCallbacks
 ): () => void {
-  const url = `${API_BASE}/api/proofread/${documentId}`
+  const url = `${AGENT_URL}/proofread/${documentId}`
   
   console.log('%c[SSE] Starting proofreading stream', 'color: #2196F3; font-weight: bold;', { url })
   
   const eventSource = new EventSource(url)
   
+  // Handle status events (agent thinking/progress)
+  eventSource.addEventListener('status', (event) => {
+    try {
+      const status: ProofreadingStatus = JSON.parse(event.data)
+      console.log('%c[SSE] Status update', 'color: #9C27B0;', status)
+      callbacks.onStatus?.(status)
+    } catch (e) {
+      console.error('[SSE] Failed to parse status:', e)
+    }
+  })
+  
+  // Handle issue events
   eventSource.addEventListener('issue', (event) => {
     try {
       const issue: ProofreadingIssue = JSON.parse(event.data)
@@ -45,6 +65,7 @@ export function streamProofread(
     }
   })
   
+  // Handle completion
   eventSource.addEventListener('done', (event) => {
     try {
       const data = JSON.parse(event.data)
@@ -57,6 +78,7 @@ export function streamProofread(
     eventSource.close()
   })
   
+  // Handle errors
   eventSource.addEventListener('error', (event) => {
     // Check if this is a custom error event from our backend
     if (event instanceof MessageEvent && event.data) {
@@ -92,8 +114,8 @@ export function getCategoryInfo(category: ProofreadingIssue['category']) {
       return { label: 'Spelling', color: '#e74c3c' }
     case 'grammar':
       return { label: 'Grammar', color: '#f39c12' }
-    case 'legal':
-      return { label: 'Legal', color: '#9b59b6' }
+    case 'consistency':
+      return { label: 'Fact/Logic', color: '#9b59b6' }
     case 'formatting':
       return { label: 'Formatting', color: '#3498db' }
     default:

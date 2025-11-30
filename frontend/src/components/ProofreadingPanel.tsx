@@ -3,7 +3,8 @@ import {
   streamProofread, 
   getCategoryInfo, 
   getSeverityInfo,
-  type ProofreadingIssue 
+  type ProofreadingIssue,
+  type ProofreadingStatus,
 } from '../api/proofreading'
 import './ProofreadingPanel.css'
 
@@ -32,6 +33,7 @@ export default function ProofreadingPanel({
 }: ProofreadingPanelProps) {
   const abortRef = useRef<(() => void) | null>(null)
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null)
+  const [status, setStatus] = useState<ProofreadingStatus | null>(null)
 
   const handleStartProofread = useCallback(() => {
     console.log('%c[USER ACTION] Starting proofreading', 'color: #9C27B0; font-weight: bold;', {
@@ -44,17 +46,23 @@ export default function ProofreadingPanel({
     }
     
     setSelectedIssueId(null)
+    setStatus(null)
     onProofreadStart()
     
     abortRef.current = streamProofread(documentId, {
       onIssue: onIssueReceived,
+      onStatus: (newStatus) => {
+        setStatus(newStatus)
+      },
       onComplete: (total) => {
         console.log('%c[PROOFREADING] Complete', 'color: #4CAF50; font-weight: bold;', { total })
+        setStatus(null)
         onProofreadComplete()
         abortRef.current = null
       },
       onError: (error) => {
         console.error('[PROOFREADING] Error:', error)
+        setStatus({ message: `Error: ${error}` })
         onProofreadComplete()
         abortRef.current = null
       }
@@ -126,7 +134,7 @@ export default function ProofreadingPanel({
         {isLoading ? (
           <div className="panel-loading">
             <div className="loading-spinner-small" />
-            <span>Analyzing document...</span>
+            <span className="status-message">{status?.message || 'Starting analysis...'}</span>
             {issues.length > 0 && (
               <span className="issue-count-live">{issues.length} issues found</span>
             )}
