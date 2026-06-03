@@ -74,7 +74,7 @@ export default function CasesList({ orgId, orgName, onSelectCase }: CasesListPro
           <h2 className="list-title">Cases</h2>
           <span className="list-count">{cases.length} case{cases.length !== 1 ? 's' : ''} in {orgName}</span>
         </div>
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+        <button className="btn btn-ghost" onClick={() => setIsModalOpen(true)}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
@@ -90,7 +90,7 @@ export default function CasesList({ orgId, orgName, onSelectCase }: CasesListPro
           </svg>
           <h3>No cases yet</h3>
           <p>Create your first case to organize documents</p>
-          <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+          <button className="btn btn-ghost" onClick={() => setIsModalOpen(true)}>
             Create Case
           </button>
         </div>

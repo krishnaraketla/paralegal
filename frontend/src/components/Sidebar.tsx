@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import type { ProofreadingIssue } from '../api/proofreading'
 import ProofreadingPanel from './ProofreadingPanel'
+import SidebarChat from './SidebarChat'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { PanelLeftClose, PanelLeft } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import './Sidebar.css'
 
 type Tool = 'proofreading' | 'summarizer'
@@ -29,6 +34,7 @@ export default function Sidebar({
   onHighlightIssue,
 }: SidebarProps) {
   const [activeTool, setActiveTool] = useState<Tool>('proofreading')
+  const [isExpanded, setIsExpanded] = useState(false)
 
   const handleToolChange = (toolId: Tool) => {
     console.log('%c[USER ACTION] Sidebar tool changed', 'color: #9C27B0; font-weight: bold;', {
@@ -101,22 +107,56 @@ export default function Sidebar({
   }
 
   return (
-    <aside className="sidebar">
-      <nav className="sidebar-rail">
-        {tools.map((tool) => (
-          <button
-            key={tool.id}
-            className={`rail-btn ${activeTool === tool.id ? 'active' : ''}`}
-            onClick={() => handleToolChange(tool.id)}
-            title={tool.label}
-          >
-            {tool.icon}
-          </button>
-        ))}
-      </nav>
-      <div className="sidebar-panel">
-        {renderPanel()}
-      </div>
-    </aside>
+    <TooltipProvider delayDuration={300}>
+      <aside className={cn("sidebar", isExpanded && "sidebar-expanded")}>
+        <nav className="sidebar-rail">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rail-btn"
+                onClick={() => setIsExpanded(!isExpanded)}
+              >
+                {isExpanded ? <PanelLeft className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left" sideOffset={8}>
+              {isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+            </TooltipContent>
+          </Tooltip>
+          
+          <div className="rail-divider" />
+          {tools.map((tool) => (
+            <Tooltip key={tool.id}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "rail-btn",
+                    activeTool === tool.id && "active"
+                  )}
+                  onClick={() => handleToolChange(tool.id)}
+                >
+                  {tool.icon}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left" sideOffset={8}>
+                {tool.label}
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </nav>
+        
+        <div className="sidebar-main">
+          <div className="sidebar-panel">
+            {renderPanel()}
+          </div>
+          
+          <SidebarChat />
+        </div>
+      </aside>
+    </TooltipProvider>
   )
 }

@@ -222,7 +222,7 @@ async def generate_proofreading_events(
         total_issues = 0
         
         # Run the parallel agent
-        user_message_text = f"""Please proofread the following document. The document file is at: {temp_path}
+        user_message_text = f"""The document file is at: {temp_path}
 
 Use the available tools to analyze the document and find issues.
 

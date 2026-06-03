@@ -95,6 +95,26 @@
   cursor: not-allowed;
 }
 
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-ghost:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  border-color: var(--text-secondary);
+}
+
+.btn-ghost svg {
+  opacity: 0.7;
+}
+
+.btn-ghost:hover svg {
+  opacity: 1;
+}
+
 .btn-secondary {
   background: var(--bg-secondary);
   color: var(--text-primary);

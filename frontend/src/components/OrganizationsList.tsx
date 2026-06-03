@@ -72,7 +72,7 @@ export default function OrganizationsList({ onSelectOrg }: OrganizationsListProp
           <h2 className="list-title">Organizations</h2>
           <span className="list-count">{organizations.length} organization{organizations.length !== 1 ? 's' : ''}</span>
         </div>
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+        <button className="btn btn-ghost" onClick={() => setIsModalOpen(true)}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
@@ -89,7 +89,7 @@ export default function OrganizationsList({ onSelectOrg }: OrganizationsListProp
           </svg>
           <h3>No organizations yet</h3>
           <p>Create your first organization to get started</p>
-          <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+          <button className="btn btn-ghost" onClick={() => setIsModalOpen(true)}>
             Create Organization
           </button>
         </div>

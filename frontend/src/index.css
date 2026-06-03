@@ -1,20 +1,70 @@
-:root {
-  --bg-page: #f3f0e8;
-  --bg-primary: #faf8f4;
-  --bg-secondary: #f5f2eb;
-  --bg-tertiary: #eeebe3;
-  --border-color: #e0dbd0;
-  --text-primary: #1a1a1a;
-  --text-secondary: #6b6b6b;
-  --accent-primary: #3d3d3d;
-  --accent-secondary: #555555;
-  --error-color: #dc4c41;
-  --success-color: #4caf50;
-  --warning-color: #f5a623;
-  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.08), 0 4px 32px rgba(0, 0, 0, 0.04);
-  --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
-  --radius-card: 16px;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm paper theme - shadcn compatible HSL values */
+    --background: 40 33% 96%;
+    --foreground: 0 0% 10%;
+    
+    --card: 40 33% 97%;
+    --card-foreground: 0 0% 10%;
+    
+    --popover: 40 33% 97%;
+    --popover-foreground: 0 0% 10%;
+    
+    --primary: 0 0% 24%;
+    --primary-foreground: 40 33% 97%;
+    
+    --secondary: 36 24% 94%;
+    --secondary-foreground: 0 0% 10%;
+    
+    --muted: 36 24% 94%;
+    --muted-foreground: 0 0% 42%;
+    
+    --accent: 36 24% 91%;
+    --accent-foreground: 0 0% 10%;
+    
+    --destructive: 4 72% 56%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 36 18% 85%;
+    --input: 36 18% 85%;
+    --ring: 0 0% 24%;
+    
+    --radius: 0.5rem;
+
+    /* Legacy variables - kept for backward compatibility */
+    --bg-page: #f3f0e8;
+    --bg-primary: #faf8f4;
+    --bg-secondary: #f5f2eb;
+    --bg-tertiary: #eeebe3;
+    --border-color: #e0dbd0;
+    --text-primary: #1a1a1a;
+    --text-secondary: #6b6b6b;
+    --accent-primary: #3d3d3d;
+    --accent-secondary: #555555;
+    --error-color: #dc4c41;
+    --success-color: #4caf50;
+    --warning-color: #f5a623;
+    --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.08), 0 4px 32px rgba(0, 0, 0, 0.04);
+    --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --radius-card: 16px;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
 }
 
 * {
@@ -24,11 +74,7 @@
 }
 
 body {
-  font-family: var(--font-sans);
   background: var(--bg-page);
-  color: var(--text-primary);
-  min-height: 100vh;
-  line-height: 1.5;
 }
 
 #root {
@@ -67,4 +113,3 @@ input, textarea {
 ::-webkit-scrollbar-thumb:hover {
   background: #b8b2a4;
 }
-

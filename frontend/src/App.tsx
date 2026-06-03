@@ -74,8 +74,8 @@ function App() {
     <div className="app">
       <header className="header">
         <div className="header-left">
-          <h1 className="logo">Paralegal</h1>
-          <span className="tagline">Document Proofreading</span>
+          <h1 className="logo">Counsel</h1>
+          {/* <span className="tagline">Document Proofreading</span> */}
         </div>
         {document && (
           <div className="header-actions">

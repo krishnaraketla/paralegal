@@ -139,7 +139,7 @@ export default function DocumentsList({ caseId, caseName, onSelectDocument }: Do
           <h2 className="list-title">Documents</h2>
           <span className="list-count">{documents.length} document{documents.length !== 1 ? 's' : ''} in {caseName}</span>
         </div>
-        <label className="btn btn-primary upload-btn">
+        <label className="btn btn-ghost upload-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="17 8 12 3 7 8" />
