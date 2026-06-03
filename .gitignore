@@ -9,6 +9,7 @@ __pycache__/
 .env.local
 .env.*.local
 *.env
+notes
 
 # Build output
 dist/

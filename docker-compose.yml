@@ -13,7 +13,6 @@ services:
     volumes:
       - onlyoffice_data:/var/www/onlyoffice/Data
       - onlyoffice_logs:/var/log/onlyoffice
-      # Custom plugin for proofreading integration
       - ./onlyoffice-plugin/paralegal:/var/www/onlyoffice/documentserver/sdkjs-plugins/paralegal
     restart: unless-stopped
 
@@ -30,12 +29,8 @@ services:
       - ONLYOFFICE_URL=http://onlyoffice
       - BACKEND_URL=http://backend:8000
       - ONLYOFFICE_JWT_SECRET=${ONLYOFFICE_JWT_SECRET}
-      # MongoDB Atlas connection string - replace with your own
-      # Get it from: MongoDB Atlas -> Database -> Connect -> Drivers -> Connection String
       - MONGODB_URI=${MONGODB_URI}
-      - DATABASE_NAME=paralegal
-      # Gemini API key for LLM-based spellcheck
-      # Get it from: https://aistudio.google.com/apikey
+      - DATABASE_NAME=${DATABASE_NAME:-paralegal}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
     depends_on:
       - onlyoffice
@@ -49,13 +44,11 @@ services:
     ports:
       - "8001:8001"
     environment:
-      # Google API key for Gemini/ADK
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - GEMINI_MODEL=gemini-2.0-flash
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
       - AGENT_PORT=8001
-      # MongoDB connection for document access
       - MONGODB_URI=${MONGODB_URI}
-      - DATABASE_NAME=paralegal
+      - DATABASE_NAME=${DATABASE_NAME:-paralegal}
     depends_on:
       - backend
     restart: unless-stopped
